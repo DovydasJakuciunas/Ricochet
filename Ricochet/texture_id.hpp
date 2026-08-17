@@ -1,7 +1,7 @@
 #pragma once
 enum class TextureID {
 	kLandscape,
-	kPlayerOne,
-	kPlayerTwo,
+	kAlphaPlayer,
+	kBetaPlayer,
 	kNumTextures
 };

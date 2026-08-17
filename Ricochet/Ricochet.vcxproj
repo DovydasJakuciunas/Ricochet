@@ -145,20 +145,31 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="aircraft.hpp" />
+    <ClInclude Include="aircraft_type.hpp" />
     <ClInclude Include="constants.hpp" />
+    <ClInclude Include="entity.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="resource_holder.hpp" />
+    <ClInclude Include="resource_identifiers.hpp" />
+    <ClInclude Include="scene_layers.hpp" />
     <ClInclude Include="scene_node.hpp" />
+    <ClInclude Include="sprite_node.hpp" />
     <ClInclude Include="texture_holder.hpp" />
     <ClInclude Include="utility.hpp" />
+    <ClInclude Include="world.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="aircraft.cpp" />
+    <ClCompile Include="entity.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scene_node.cpp" />
+    <ClCompile Include="sprite_node.cpp" />
     <ClCompile Include="texture_holder.cpp" />
     <ClCompile Include="texture_id.hpp" />
     <ClCompile Include="utility.cpp" />
+    <ClCompile Include="world.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resource_holder.inl" />

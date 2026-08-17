@@ -22,9 +22,12 @@ private:
 	ResourceHolder<TextureID, sf::Texture> m_textures;
 	std::unique_ptr<sf::Sprite> m_player;
 
-	bool m_is_moving_up = false;
-	bool m_is_moving_down = false;
-	bool m_is_moving_right = false;
-	bool m_is_moving_left = false;
+	bool m_is_accelerating = false;  
+	bool m_is_decelerating = false;  
+	bool m_is_rotating_left = false;  
+	bool m_is_rotating_right = false; 
+
+	float m_current_speed = 0.f;     
+	float m_rotation = 0.f;          
 };
 

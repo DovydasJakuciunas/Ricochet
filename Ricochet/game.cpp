@@ -6,8 +6,13 @@
 Game::Game()
 	: m_window(sf::VideoMode({ 640, 480 }), "SFML Refactor"), m_textures(), m_player()
 {
-	m_textures.Load(TextureID::kPlayerOne, "Media/Textures/Eagle.png");
-	m_player = std::make_unique<sf::Sprite>(m_textures.Get(TextureID::kPlayerOne));
+	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/AlphaPlayer.png");
+	m_player = std::make_unique<sf::Sprite>(m_textures.Get(TextureID::kAlphaPlayer));
+
+	// Set origin to center of sprite for symmetric rotation
+	sf::FloatRect bounds = m_player->getLocalBounds();
+	m_player->setOrigin(bounds.getCenter());
+
 	m_player->setPosition({ 100.f, 100.f });
 }
 
@@ -49,57 +54,41 @@ void Game::ProcessEvents()
 
 void Game::Update(sf::Time delta_time)
 {
-	sf::Vector2f movement(0.f, 0.f);
-	if (m_is_moving_up)
+	const float dt = delta_time.asSeconds();
+
+	// Handle Speed of Player
+	if (m_is_accelerating)
 	{
-		movement.y -= 1;
+		m_current_speed = std::min(m_current_speed + kPlayerAcceleration * dt, kPlayerSpeed);
 	}
-	if (m_is_moving_down)
+	else if (m_is_decelerating)
 	{
-		movement.y += 1;
+		m_current_speed = std::max(m_current_speed - kPlayerDeceleration * dt, 0.f);
 	}
-	if (m_is_moving_left)
+	else
 	{
-		movement.x -= 1;
+		// Physics based drag: play starts losing speed if not accelerating
+		float drag_deceleration = (drag_coefficient * m_current_speed * m_current_speed) / kPlayerSpeed;
+		m_current_speed = std::max(m_current_speed - drag_deceleration * dt, 0.f);
 	}
-	if (m_is_moving_right)
+
+	// Handle Rotation Speed
+	if (m_is_rotating_left)
 	{
-		movement.x += 1;
+		m_rotation -= kPlayerRotationSpeed * dt;
 	}
-	m_player->move(Utility::Normalise(movement) * kPlayerSpeed * delta_time.asSeconds());
+	if (m_is_rotating_right)
+	{
+		m_rotation += kPlayerRotationSpeed * dt;
+	}
 
+	m_player->setRotation(sf::degrees(m_rotation + 180));
+
+	//Starting at 90 for SFML, Calculating Players angle, converts to unit vector and moves the player
+	const float angle_rad = (m_rotation + 90.f) * kPieValue / 180.f;
+	sf::Vector2f direction(std::cos(angle_rad), std::sin(angle_rad));
+	m_player->move(direction * m_current_speed * dt);
 }
-
-sf::Vector2f SceneNode::GetWorldPosition() const
-{
-	return sf::Vector2f();
-}
-
-sf::Transform SceneNode::GetWorldTransform() const
-{
-	return sf::Transform();
-}
-
-void SceneNode::UpdateCurrent(sf::Time dt)
-{
-}
-
-void SceneNode::UpdateChildren(sf::Time dt)
-{
-}
-
-void SceneNode::draw(sf::RenderTarget& target, sf::RenderStates states) const
-{
-}
-
-void SceneNode::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
-{
-}
-
-void SceneNode::DrawChildren(sf::RenderTarget& target, sf::RenderStates states) const
-{
-}
-
 
 void Game::Render()
 {
@@ -112,18 +101,18 @@ void Game::HandlePlayerInput(sf::Keyboard::Scancode key, bool is_pressed)
 {
 	if (key == sf::Keyboard::Scancode::W)
 	{
-		m_is_moving_up = is_pressed;
+		m_is_accelerating = is_pressed;
 	}
 	if (key == sf::Keyboard::Scancode::S)
 	{
-		m_is_moving_down = is_pressed;
+		m_is_decelerating = is_pressed;
 	}
 	if (key == sf::Keyboard::Scancode::A)
 	{
-		m_is_moving_left = is_pressed;
+		m_is_rotating_left = is_pressed;
 	}
 	if (key == sf::Keyboard::Scancode::D)
 	{
-		m_is_moving_right = is_pressed;
+		m_is_rotating_right = is_pressed;
 	}
 }
