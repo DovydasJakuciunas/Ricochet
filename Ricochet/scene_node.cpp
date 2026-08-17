@@ -1,5 +1,6 @@
 #include "scene_node.hpp"
 #include "entity.hpp"
+#include "aircraft.hpp"
 
 SceneNode::SceneNode():m_children(), m_parent(nullptr)
 {

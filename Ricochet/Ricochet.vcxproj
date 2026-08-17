@@ -147,6 +147,8 @@
   <ItemGroup>
     <ClInclude Include="aircraft.hpp" />
     <ClInclude Include="aircraft_type.hpp" />
+    <ClInclude Include="command.hpp" />
+    <ClInclude Include="command_queue.hpp" />
     <ClInclude Include="constants.hpp" />
     <ClInclude Include="entity.hpp" />
     <ClInclude Include="game.hpp" />
@@ -161,6 +163,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aircraft.cpp" />
+    <ClCompile Include="command.cpp" />
+    <ClCompile Include="command_queue.cpp" />
     <ClCompile Include="entity.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />

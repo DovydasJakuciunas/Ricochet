@@ -4,7 +4,7 @@
 #include "scene_node.hpp"
 
 Game::Game()
-	: m_window(sf::VideoMode({ 640, 480 }), "SFML Refactor"), m_textures(), m_player()
+	: m_window(sf::VideoMode({ 640, 480 }), "SFML Refactor"), m_world(m_window)
 {
 	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/AlphaPlayer.png");
 	m_player = std::make_unique<sf::Sprite>(m_textures.Get(TextureID::kAlphaPlayer));
@@ -26,34 +26,36 @@ void Game::Run()
 		while (time_since_last_update.asSeconds() > kTimePerFrame)
 		{
 			time_since_last_update -= sf::seconds(kTimePerFrame);
-			ProcessEvents();
+			ProcessInputs();
 			Update(sf::seconds(kTimePerFrame));
 		}
 		Render();
 	}
 }
 
-void Game::ProcessEvents()
+void Game::ProcessInputs()
 {
+	CommandQueue & compl = m_world.GetCommandQueue();
+
 	while (const std::optional event = m_window.pollEvent())
 	{
+		m_player.HandleEvents(event, commands);
+
 		if (event->is<sf::Event::Closed>())
 		{
 			m_window.close();
-		}
-		else if (const auto* KeyPressed = event->getIf<sf::Event::KeyPressed>())
-		{
-			HandlePlayerInput(KeyPressed->scancode, true);
-		}
-		else if (const auto* KeyReleased = event->getIf<sf::Event::KeyReleased>())
-		{
-			HandlePlayerInput(KeyReleased->scancode, false);
+			break;
 		}
 	}
+	m_player.HandleRealTimeInput(commands);
 }
 
 void Game::Update(sf::Time delta_time)
 {
+	m_world.Update(delta_time);
+
+	//TODO - Move this elsewhere
+	/*
 	const float dt = delta_time.asSeconds();
 
 	// Handle Speed of Player
@@ -88,15 +90,20 @@ void Game::Update(sf::Time delta_time)
 	const float angle_rad = (m_rotation + 90.f) * kPieValue / 180.f;
 	sf::Vector2f direction(std::cos(angle_rad), std::sin(angle_rad));
 	m_player->move(direction * m_current_speed * dt);
+	*/
 }
 
 void Game::Render()
 {
 	m_window.clear();
-	m_window.draw(*m_player);
+	m_window.Draw();
 	m_window.display();
 }
 
+
+//TODO - Also Move this elsewhere
+
+/*
 void Game::HandlePlayerInput(sf::Keyboard::Scancode key, bool is_pressed)
 {
 	if (key == sf::Keyboard::Scancode::W)
@@ -115,4 +122,5 @@ void Game::HandlePlayerInput(sf::Keyboard::Scancode key, bool is_pressed)
 	{
 		m_is_rotating_right = is_pressed;
 	}
+	*/
 }
