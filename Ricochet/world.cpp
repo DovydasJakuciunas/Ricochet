@@ -1,11 +1,14 @@
 #include "world.hpp"
 #include "sprite_node.hpp"
 #include <iostream>
+#include "state.hpp"
+#include <SFML/System/Angle.hpp>
 
-World::World(sf::RenderWindow& window)
+World::World(sf::RenderWindow& window, FontHolder* font)
 	: m_window(window)
 	, m_camera(window.getDefaultView())
 	, m_textures()
+	, m_fonts(font)
 	, m_scene_graph()
 	, m_scene_layers()
 	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, 1000.f))
@@ -78,7 +81,7 @@ void World::BuildScene()
 	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(background_sprite));
 
 	//Create the player aircraft
-	std::unique_ptr<Aircraft> player(new Aircraft(AircraftType::kAlphaPlayer, m_textures));
+	std::unique_ptr<Aircraft> player(new Aircraft(AircraftType::kAlphaPlayer, m_textures, *m_fonts));
 	m_player_aircraft = player.get();
 	player->setPosition(m_spawn_position);
 	m_scene_layers[static_cast<int>(SceneLayers::kAir)]->AttachChild(std::move(player));
@@ -87,15 +90,7 @@ void World::BuildScene()
 
 void World::AdaptPlayerVelocity()
 {
-	sf::Vector2f velocity = m_player_aircraft->GetVelocity();
-
-	//If they are moving diagonally divide by sqrt 2
-	if (velocity.x != 0.f && velocity.y != 0.f)
-	{
-		m_player_aircraft->SetVelocity(velocity / std::sqrt(2.f));
-	}
-	//Add scrolling velocity
-	m_player_aircraft->Accelerate(0.f, m_scroll_speed);
+	
 }
 
 void World::AdaptPlayerPosition()

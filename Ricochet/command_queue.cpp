@@ -1,4 +1,5 @@
 #include "command_queue.hpp"
+#include "statestack.hpp"
 
 void CommandQueue::Push(const Command& command)
 {

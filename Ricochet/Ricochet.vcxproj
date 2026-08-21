@@ -148,11 +148,14 @@
     <ClInclude Include="action.hpp" />
     <ClInclude Include="aircraft.hpp" />
     <ClInclude Include="aircraft_type.hpp" />
+    <ClInclude Include="application.hpp" />
     <ClInclude Include="command.hpp" />
     <ClInclude Include="command_queue.hpp" />
     <ClInclude Include="constants.hpp" />
+    <ClInclude Include="data_tables.hpp" />
     <ClInclude Include="entity.hpp" />
-    <ClInclude Include="game.hpp" />
+    <ClInclude Include="fontID.hpp" />
+    <ClInclude Include="game_state.hpp" />
     <ClInclude Include="player.hpp" />
     <ClInclude Include="receiver_categories.hpp" />
     <ClInclude Include="resource_holder.hpp" />
@@ -160,22 +163,32 @@
     <ClInclude Include="scene_layers.hpp" />
     <ClInclude Include="scene_node.hpp" />
     <ClInclude Include="sprite_node.hpp" />
+    <ClInclude Include="stack_actions.hpp" />
+    <ClInclude Include="state.hpp" />
+    <ClInclude Include="stateid.hpp" />
+    <ClInclude Include="statestack.hpp" />
     <ClInclude Include="texture_holder.hpp" />
+    <ClInclude Include="text_node.hpp" />
     <ClInclude Include="utility.hpp" />
     <ClInclude Include="world.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aircraft.cpp" />
+    <ClCompile Include="application.cpp" />
     <ClCompile Include="command.cpp" />
     <ClCompile Include="command_queue.cpp" />
+    <ClCompile Include="data_tables.cpp" />
     <ClCompile Include="entity.cpp" />
-    <ClCompile Include="game.cpp" />
+    <ClCompile Include="game_state.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="scene_node.cpp" />
     <ClCompile Include="sprite_node.cpp" />
+    <ClCompile Include="state.cpp" />
+    <ClCompile Include="statestack.cpp" />
     <ClCompile Include="texture_holder.cpp" />
     <ClCompile Include="texture_id.hpp" />
+    <ClCompile Include="text_node.cpp" />
     <ClCompile Include="utility.cpp" />
     <ClCompile Include="world.cpp" />
   </ItemGroup>

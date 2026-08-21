@@ -1,15 +1,42 @@
 #include "player.hpp"
 #include "aircraft.hpp"
+#include "constants.hpp"
+#include <cmath>
 
-struct AircraftMover
+struct AircraftRotator
 {
-	AircraftMover(float vx, float vy) : velocity(vx, vy) {}
+	AircraftRotator(bool rotating_left) : m_rotating_left(rotating_left) {}
 	void operator()(Aircraft& aircraft, sf::Time) const
 	{
-		aircraft.Accelerate(velocity);
+		if (m_rotating_left)
+		{
+			aircraft.SetRotatingLeft(true);
+		}
+		else
+		{
+			aircraft.SetRotatingRight(true);
+		}
 	}
 
-	sf::Vector2f velocity;
+	bool m_rotating_left;
+};
+
+struct AircraftAccelerator
+{
+	AircraftAccelerator(bool accelerating) : m_accelerating(accelerating) {}
+	void operator()(Aircraft& aircraft, sf::Time) const
+	{
+		if (m_accelerating)
+		{
+			aircraft.SetAccelerating(true);
+		}
+		else
+		{
+			aircraft.SetDecelerating(true);
+		}
+	}
+
+	bool m_accelerating;
 };
 
 Player::Player()
@@ -81,10 +108,10 @@ sf::Keyboard::Scancode Player::GetAssignedKey(Action action) const
 
 void Player::InitialiseActions()
 {
-	m_action_binding[Action::kRotateLeft].action = DerivedAction<Aircraft>(AircraftMover(-kPlayerSpeed, 0.f));
-	m_action_binding[Action::kRotateRight].action = DerivedAction<Aircraft>(AircraftMover(kPlayerSpeed, 0.f));
-	m_action_binding[Action::kAccelerate].action = DerivedAction<Aircraft>(AircraftMover(0.f, -kPlayerSpeed));
-	m_action_binding[Action::kDecelerate].action = DerivedAction<Aircraft>(AircraftMover(0.f, kPlayerSpeed)); 
+	m_action_binding[Action::kRotateLeft].action = DerivedAction<Aircraft>(AircraftRotator(true));
+	m_action_binding[Action::kRotateRight].action = DerivedAction<Aircraft>(AircraftRotator(false));
+	m_action_binding[Action::kAccelerate].action = DerivedAction<Aircraft>(AircraftAccelerator(true));
+	m_action_binding[Action::kDecelerate].action = DerivedAction<Aircraft>(AircraftAccelerator(false));
 }
 
 bool Player::IsRealTimeAction(Action action)

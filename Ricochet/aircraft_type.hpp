@@ -2,5 +2,6 @@
 
 enum class AircraftType {
 	kAlphaPlayer,
-	kBetaPlayer
+	kBetaPlayer,
+	kAircraftCount
 };

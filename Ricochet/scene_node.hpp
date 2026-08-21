@@ -19,7 +19,7 @@ public:
 	sf::Vector2f GetWorldPosition() const;
 	sf::Transform GetWorldTransform() const;
 
-	void OnCommand(const Command& command, sf::Time dt);
+	virtual void OnCommand(const Command& command, sf::Time dt);
 
 private:
 	virtual void UpdateCurrent(const sf::Time& dt);
