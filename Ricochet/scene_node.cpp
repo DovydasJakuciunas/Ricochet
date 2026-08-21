@@ -1,18 +1,27 @@
 #include "scene_node.hpp"
+#include "command.hpp"
 #include "entity.hpp"
 #include "aircraft.hpp"
 
-SceneNode::SceneNode():m_children(), m_parent(nullptr)
-{
+#include <algorithm>
+#include <cassert>
 
+#ifndef NDEBUG
+#include <iostream>
+#endif
+
+
+SceneNode::SceneNode() :m_children(), m_parent(nullptr)
+{
 }
 
 void SceneNode::AttachChild(Ptr child)
 {
 	child->m_parent = this;
+	//Use emplace_back rather than push_back and understand why
 	m_children.emplace_back(std::move(child));
-
 }
+
 
 SceneNode::Ptr SceneNode::DetachChild(const SceneNode& node)
 {
@@ -25,7 +34,7 @@ SceneNode::Ptr SceneNode::DetachChild(const SceneNode& node)
 	return result;
 }
 
-void SceneNode::Update(sf::Time dt)
+void SceneNode::Update(const sf::Time& dt)
 {
 	UpdateCurrent(dt);
 	UpdateChildren(dt);
@@ -46,11 +55,28 @@ sf::Transform SceneNode::GetWorldTransform() const
 	return transform;
 }
 
-void SceneNode::UpdateCurrent(sf::Time dt)
+void SceneNode::OnCommand(const Command& command, sf::Time dt)
 {
+	//Is this command for me. If so execute it
+	//Regardless of answer send to all children
+	if (command.category & GetCategory())
+	{
+		command.action(*this, dt);
+	}
+
+	//Pass it on to children
+	for (Ptr& child : m_children)
+	{
+		child->OnCommand(command, dt);
+	}
 }
 
-void SceneNode::UpdateChildren(sf::Time dt)
+void SceneNode::UpdateCurrent(const sf::Time& dt)
+{
+	// Do nothing here
+}
+
+void SceneNode::UpdateChildren(const sf::Time& dt)
 {
 	for (Ptr& child : m_children)
 	{
@@ -60,13 +86,18 @@ void SceneNode::UpdateChildren(sf::Time dt)
 
 void SceneNode::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
+	//Apply the transform to the current node
 	states.transform *= getTransform();
+	//Draw the nod eand its children with the changed transform
 	DrawCurrent(target, states);
 	DrawChildren(target, states);
 }
 
+
+
 void SceneNode::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
+	// Do nothing
 }
 
 void SceneNode::DrawChildren(sf::RenderTarget& target, sf::RenderStates states) const
@@ -75,4 +106,9 @@ void SceneNode::DrawChildren(sf::RenderTarget& target, sf::RenderStates states) 
 	{
 		child->draw(target, states);
 	}
+}
+
+unsigned int SceneNode::GetCategory() const
+{
+	return static_cast<unsigned int>(ReceiverCategories::kScene);
 }

@@ -1,5 +1,6 @@
 #include "world.hpp"
 #include "sprite_node.hpp"
+#include <iostream>
 
 World::World(sf::RenderWindow& window)
 	: m_window(window)
@@ -7,9 +8,9 @@ World::World(sf::RenderWindow& window)
 	, m_textures()
 	, m_scene_graph()
 	, m_scene_layers()
-	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, 3000.f))
+	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, 1000.f))
 	, m_spawn_position(m_camera.getSize().x / 2.f, m_world_bounds.size.y - m_camera.getSize().y / 2.f)
-	, m_scroll_speed(-50.f)
+	, m_scroll_speed(-100.f)
 	, m_player_aircraft(nullptr)
 {
 	LoadTextures();
@@ -17,23 +18,25 @@ World::World(sf::RenderWindow& window)
 	m_camera.setCenter(m_spawn_position);
 }
 
-void World::Update(sf::Time dt)
+void World::Update(const sf::Time& dt)
 {
-	
+
 	/* 
 	//Scroll the world
 	m_camera.move(sf::Vector2f(0, m_scroll_speed * dt.asSeconds()));
 	*/
-	sf::Vector2f position = m_player_aircraft->getPosition();
-	sf::Vector2f velocity = m_player_aircraft->GetVelocity();
 
-	//If the player gets close to the boundaries of the world flip their x-velocity
-	if (position.x <= 150.f || position.x >= m_world_bounds.size.x - 150.f)
+	m_player_aircraft->SetVelocity(0.f, 0.f);
+
+	while (!m_command_queue.IsEmpty())
 	{
-		velocity.x = -velocity.x;
-		m_player_aircraft->SetVelocity(velocity);
+		m_scene_graph.OnCommand(m_command_queue.Pop(), dt);
 	}
+
+	AdaptPlayerVelocity();
+
 	m_scene_graph.Update(dt);
+	AdaptPlayerPosition();
 }
 
 void World::Draw()
@@ -42,11 +45,16 @@ void World::Draw()
 	m_window.draw(m_scene_graph);
 }
 
+CommandQueue& World::GetCommandQueue()
+{
+	return m_command_queue;
+}
+
 void World::LoadTextures()
 {
-	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/Eagle.png");
-	m_textures.Load(TextureID::kBetaPlayer, "Media/Textures/Raptor.png");
-	m_textures.Load(TextureID::kLandscape, "Media/Textures/Desert.png");
+	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/AlphaPlayer.png");
+	m_textures.Load(TextureID::kBetaPlayer, "Media/Textures/BetaPlayer.png");
+	m_textures.Load(TextureID::kLandscape, "Media/Textures/Background.png");
 }
 
 void World::BuildScene()
@@ -68,5 +76,40 @@ void World::BuildScene()
 	std::unique_ptr<SpriteNode> background_sprite(new SpriteNode(texture, textureRect));
 	background_sprite->setPosition(sf::Vector2f(0,0));
 	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(background_sprite));
+
+	//Create the player aircraft
+	std::unique_ptr<Aircraft> player(new Aircraft(AircraftType::kAlphaPlayer, m_textures));
+	m_player_aircraft = player.get();
+	player->setPosition(m_spawn_position);
+	m_scene_layers[static_cast<int>(SceneLayers::kAir)]->AttachChild(std::move(player));
+
+}
+
+void World::AdaptPlayerVelocity()
+{
+	sf::Vector2f velocity = m_player_aircraft->GetVelocity();
+
+	//If they are moving diagonally divide by sqrt 2
+	if (velocity.x != 0.f && velocity.y != 0.f)
+	{
+		m_player_aircraft->SetVelocity(velocity / std::sqrt(2.f));
+	}
+	//Add scrolling velocity
+	m_player_aircraft->Accelerate(0.f, m_scroll_speed);
+}
+
+void World::AdaptPlayerPosition()
+{
+	//keep player on the screen
+	sf::FloatRect view_bounds(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());
+	const float border_distance = 40.f;
+
+	sf::Vector2f position = m_player_aircraft->getPosition();
+	position.x = std::min(position.x, view_bounds.size.x - border_distance);
+	position.x = std::max(position.x, border_distance);
+	position.y = std::min(position.y, view_bounds.position.y + view_bounds.size.y - border_distance);
+	position.y = std::max(position.y, view_bounds.position.y + border_distance);
+
+	m_player_aircraft->setPosition(position);
 
 }

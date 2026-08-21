@@ -4,6 +4,7 @@
 #include "resource_holder.hpp"
 #include "texture_id.hpp"
 #include "world.hpp"
+#include "player.hpp"
 
 class Game
 {
@@ -12,10 +13,10 @@ public:
 	void Run();
 
 private:
-	void ProcessEvents();
+	void ProcessEvent();
 	void Update(sf::Time delta_time);
 	void Render();
-	void ProcessInputs();
+	void ProcessInput();
 	//void HandlePlayerInput(sf::Keyboard::Scancode key, bool is_pressed);
 
 

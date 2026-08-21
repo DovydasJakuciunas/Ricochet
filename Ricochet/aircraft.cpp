@@ -21,6 +21,18 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures) : m_type(ty
 	m_sprite.setOrigin(bounds.getCenter());
 }
 
+unsigned int Aircraft::GetCategory() const
+{
+	switch (m_type)
+	{
+	case AircraftType::kAlphaPlayer:
+		return static_cast<unsigned int>(ReceiverCategories::kLocalPlayer);
+	case AircraftType::kBetaPlayer:
+		return static_cast<unsigned int>(ReceiverCategories::kForeignPlayer);
+	}
+	return 0;
+}
+
 void Aircraft::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	target.draw(m_sprite, states);

@@ -6,14 +6,6 @@
 Game::Game()
 	: m_window(sf::VideoMode({ 640, 480 }), "SFML Refactor"), m_world(m_window)
 {
-	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/AlphaPlayer.png");
-	m_player = std::make_unique<sf::Sprite>(m_textures.Get(TextureID::kAlphaPlayer));
-
-	// Set origin to center of sprite for symmetric rotation
-	sf::FloatRect bounds = m_player->getLocalBounds();
-	m_player->setOrigin(bounds.getCenter());
-
-	m_player->setPosition({ 100.f, 100.f });
 }
 
 void Game::Run()
@@ -26,20 +18,20 @@ void Game::Run()
 		while (time_since_last_update.asSeconds() > kTimePerFrame)
 		{
 			time_since_last_update -= sf::seconds(kTimePerFrame);
-			ProcessInputs();
+			ProcessInput();
 			Update(sf::seconds(kTimePerFrame));
 		}
 		Render();
 	}
 }
 
-void Game::ProcessInputs()
+void Game::ProcessInput()
 {
-	CommandQueue & compl = m_world.GetCommandQueue();
+	CommandQueue& commands = m_world.GetCommandQueue();
 
 	while (const std::optional event = m_window.pollEvent())
 	{
-		m_player.HandleEvents(event, commands);
+		m_player.HandleEvent(*event, commands);
 
 		if (event->is<sf::Event::Closed>())
 		{
@@ -49,6 +41,7 @@ void Game::ProcessInputs()
 	}
 	m_player.HandleRealTimeInput(commands);
 }
+
 
 void Game::Update(sf::Time delta_time)
 {
@@ -96,31 +89,6 @@ void Game::Update(sf::Time delta_time)
 void Game::Render()
 {
 	m_window.clear();
-	m_window.Draw();
+	m_world.Draw();
 	m_window.display();
-}
-
-
-//TODO - Also Move this elsewhere
-
-/*
-void Game::HandlePlayerInput(sf::Keyboard::Scancode key, bool is_pressed)
-{
-	if (key == sf::Keyboard::Scancode::W)
-	{
-		m_is_accelerating = is_pressed;
-	}
-	if (key == sf::Keyboard::Scancode::S)
-	{
-		m_is_decelerating = is_pressed;
-	}
-	if (key == sf::Keyboard::Scancode::A)
-	{
-		m_is_rotating_left = is_pressed;
-	}
-	if (key == sf::Keyboard::Scancode::D)
-	{
-		m_is_rotating_right = is_pressed;
-	}
-	*/
 }

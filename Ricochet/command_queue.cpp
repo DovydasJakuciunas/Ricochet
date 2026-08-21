@@ -2,7 +2,7 @@
 
 void CommandQueue::Push(const Command& command)
 {
-    m_queue.push(Command);
+    m_queue.push(command);
 }
 
 Command CommandQueue::Pop()

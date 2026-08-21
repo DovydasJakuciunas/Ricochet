@@ -1,5 +1,6 @@
 #include "command.hpp"
 
-Command::Command()
+Command::Command() : action (), category(static_cast<unsigned int>(ReceiverCategories::kNone))
 {
+
 }
