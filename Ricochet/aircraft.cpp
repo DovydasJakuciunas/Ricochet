@@ -24,7 +24,7 @@ TextureID ToTextureID(AircraftType type)
 	return TextureID::kAlphaPlayer;
 }
 
-Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts) : Entity(Table[static_cast<int>(type)]).m_hitpoints), m_type(type), m_sprite(textures.Get(ToTextureID(type))), m_health_display(nullptr), m_distance_travelled(0.f), m_directions_index(0)
+Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts) : Entity(Table[static_cast<int>(type)].m_hitpoints), m_type(type), m_sprite(textures.Get(ToTextureID(type))), m_health_display(nullptr), m_distance_travelled(0.f), m_directions_index(0)
 {
 	sf::FloatRect bounds = m_sprite.getLocalBounds();
 	m_sprite.setOrigin(bounds.getCenter());

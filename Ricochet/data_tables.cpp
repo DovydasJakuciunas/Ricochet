@@ -9,4 +9,5 @@ std::vector<AircraftData> InitializeAircraftData()
 	data[static_cast<int>(AircraftType::kAlphaPlayer)].m_fire_interval = sf::seconds(1);
 	data[static_cast<int>(AircraftType::kAlphaPlayer)].m_texture = TextureID::kAlphaPlayer;
 
+	return data;
 }

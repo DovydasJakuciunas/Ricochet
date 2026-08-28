@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include "receiver_categories.hpp"
 #include "command.hpp"
-
+#include "command_queue.hpp"
 
 class SceneNode : public sf::Transformable, public sf::Drawable
 {
@@ -21,6 +21,10 @@ public:
 
 	virtual void OnCommand(const Command& command, sf::Time dt);
 
+
+protected:
+	virtual void UpdateCurrent(sf::Time dt, CommandQueue& commands);
+
 private:
 	virtual void UpdateCurrent(const sf::Time& dt);
 	void UpdateChildren(const sf::Time& dt);
@@ -29,6 +33,8 @@ private:
 	virtual void DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const;
 	void DrawChildren(sf::RenderTarget& target, sf::RenderStates states) const;
 	virtual unsigned int GetCategory() const;
+
+	virtual bool IsDestroyed() const;
 
 private:
 	std::vector<Ptr> m_children;

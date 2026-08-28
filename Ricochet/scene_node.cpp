@@ -93,12 +93,21 @@ void SceneNode::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	DrawChildren(target, states);
 }
 
-
+bool SceneNode::IsDestroyed() const
+{
+	return false;
+}
 
 void SceneNode::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	// Do nothing
 }
+
+void SceneNode::UpdateCurrent(sf::Time dt, CommandQueue& commands)
+{
+	// Do nothing here
+}
+
 
 void SceneNode::DrawChildren(sf::RenderTarget& target, sf::RenderStates states) const
 {

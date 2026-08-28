@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\States">
+      <UniqueIdentifier>{50f4134d-3223-4f23-b65d-b64b59623a8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\States">
+      <UniqueIdentifier>{49397bc0-6566-4ebf-ac01-e9b7366eddb9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="constants.hpp">
@@ -72,9 +78,6 @@
     <ClInclude Include="fontID.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game_state.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="stack_actions.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -92,6 +95,21 @@
     </ClInclude>
     <ClInclude Include="text_node.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="menu_options.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="menu_state.hpp">
+      <Filter>Header Files\States</Filter>
+    </ClInclude>
+    <ClInclude Include="game_state.hpp">
+      <Filter>Header Files\States</Filter>
+    </ClInclude>
+    <ClInclude Include="pause_state.hpp">
+      <Filter>Header Files\States</Filter>
+    </ClInclude>
+    <ClInclude Include="title_state.hpp">
+      <Filter>Header Files\States</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -134,9 +152,6 @@
     <ClCompile Include="application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game_state.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="state.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -148,6 +163,18 @@
     </ClCompile>
     <ClCompile Include="text_node.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game_state.cpp">
+      <Filter>Source Files\States</Filter>
+    </ClCompile>
+    <ClCompile Include="menu_state.cpp">
+      <Filter>Source Files\States</Filter>
+    </ClCompile>
+    <ClCompile Include="pause_state.cpp">
+      <Filter>Source Files\States</Filter>
+    </ClCompile>
+    <ClCompile Include="title_state.cpp">
+      <Filter>Source Files\States</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

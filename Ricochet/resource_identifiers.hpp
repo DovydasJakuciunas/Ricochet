@@ -1,8 +1,8 @@
 #pragma once
 #include "texture_id.hpp"
-#include "fontID.hpp"
 #include "resource_holder.hpp"
 #include <SFML/Graphics/Font.hpp>
+#include "fontID.hpp"
 
 namespace sf
 {
