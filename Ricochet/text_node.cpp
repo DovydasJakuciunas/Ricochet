@@ -1,10 +1,9 @@
 #include "text_node.hpp"
 #include "utility.hpp"
 
-TextNode::TextNode(const FontHolder& fonts, std::string& text) 
+TextNode::TextNode(const FontHolder& fonts, std::string& text)
 	:m_text(fonts.Get(FontID::kMain), text, 20)
 {
-
 }
 
 void TextNode::SetString(const std::string& text)

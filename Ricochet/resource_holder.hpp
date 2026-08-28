@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <string>
+#include <memory>
 
 template<typename Identifier, typename Resource>
 class ResourceHolder
@@ -17,3 +18,4 @@ private:
 };
 
 #include "resource_holder.inl"
+

@@ -1,9 +1,15 @@
 #include "aircraft.hpp"
 #include "texture_id.hpp"
-#include "constants.hpp"
-#include <cmath>
 #include "data_tables.hpp"
 #include "utility.hpp"
+#include "constants.hpp"
+#include "pickup_type.hpp"
+#include "projectile.hpp"
+#include "pickup.hpp"
+#include "projectile_type.hpp"
+#include <iostream>
+#include "sound_node.hpp"
+
 
 namespace
 {
@@ -14,37 +20,102 @@ TextureID ToTextureID(AircraftType type)
 {
 	switch (type)
 	{
-	case AircraftType::kAlphaPlayer:
-		return TextureID::kAlphaPlayer;
+	case AircraftType::kEagle:
+		return TextureID::kEagle;
 		break;
-	case AircraftType::kBetaPlayer:
-		return TextureID::kBetaPlayer;
+	case AircraftType::kRaptor:
+		return TextureID::kRaptor;
 		break;
 	}
-	return TextureID::kAlphaPlayer;
+	return TextureID::kEagle;
 }
 
-Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts) : Entity(Table[static_cast<int>(type)].m_hitpoints), m_type(type), m_sprite(textures.Get(ToTextureID(type))), m_health_display(nullptr), m_distance_travelled(0.f), m_directions_index(0)
+Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts)
+	: Entity(Table[static_cast<int>(type)].m_hitpoints)
+	, m_type(type)
+	, m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect)
+	, m_health_display(nullptr)
+	, m_missile_display(nullptr)
+	, m_distance_travelled(0.f)
+	, m_directions_index(0)
+	, m_fire_rate(1)
+	, m_spread_level(1)
+	, m_is_firing(false)
+	, m_is_launching_missile(false)
+	, m_fire_countdown(sf::Time::Zero)
+	, m_missile_ammo(2)
+	, m_is_marked_for_removal(false)
+	, m_spawned_pickup(false)
+	, m_show_explosion(true)
+	, m_explosion(textures.Get(TextureID::kExplosion))
+	, m_explosion_began(false)
 {
-	sf::FloatRect bounds = m_sprite.getLocalBounds();
-	m_sprite.setOrigin(bounds.getCenter());
+	m_explosion.SetFrameSize(sf::Vector2i(256, 256));
+	m_explosion.SetNumFrames(16);
+	m_explosion.SetDuration(sf::seconds(1));
+	Utility::CentreOrigin(m_sprite);
+	Utility::CentreOrigin(m_explosion);
+
+	m_fire_command.category = static_cast<int>(ReceiverCategories::kScene);
+	m_fire_command.action = [this, &textures](SceneNode& node, sf::Time dt)
+		{
+			CreateBullet(node, textures);
+		};
+
+	m_missile_command.category = static_cast<int>(ReceiverCategories::kScene);
+	m_missile_command.action = [this, &textures](SceneNode& node, sf::Time dt)
+		{
+			CreateProjectile(node, ProjectileType::kMissile, 0.f, 0.5f, textures);
+		};
+	m_drop_pickup_command.category = static_cast<int>(ReceiverCategories::kScene);
+	m_drop_pickup_command.action = [this, &textures](SceneNode& node, sf::Time dt)
+		{
+			CreatePickup(node, textures);
+		};
+
 	std::string* health = new std::string("");
 	std::unique_ptr<TextNode> health_display(new TextNode(fonts, *health));
 	m_health_display = health_display.get();
 	AttachChild(std::move(health_display));
+
+	if (Aircraft::GetCategory() == static_cast<int>(ReceiverCategories::kPlayerAircraft))
+	{
+		std::string* missile_ammo = new std::string("");
+		std::unique_ptr<TextNode> missile_display(new TextNode(fonts, *missile_ammo));
+		m_missile_display = missile_display.get();
+		AttachChild(std::move(missile_display));
+	}
 	UpdateTexts();
 }
 
 unsigned int Aircraft::GetCategory() const
 {
-	switch (m_type)
+	if (IsAllied())
 	{
-	case AircraftType::kAlphaPlayer:
-		return static_cast<unsigned int>(ReceiverCategories::kLocalPlayer);
-	case AircraftType::kBetaPlayer:
-		return static_cast<unsigned int>(ReceiverCategories::kForeignPlayer);
+		return static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
 	}
-	return 0;
+	return static_cast<unsigned int>(ReceiverCategories::kEnemyAircraft);
+}
+
+void Aircraft::IncreaseFireRate()
+{
+	if (m_fire_rate < kMaxFireRate)
+	{
+		++m_fire_rate;
+	}
+}
+
+void Aircraft::IncreaseFireSpread()
+{
+	if (m_spread_level < kMaxSpread)
+	{
+		++m_spread_level;
+	}
+}
+
+void Aircraft::CollectMissile(unsigned int count)
+{
+	m_missile_ammo += count;
 }
 
 void Aircraft::UpdateTexts()
@@ -52,73 +123,248 @@ void Aircraft::UpdateTexts()
 	m_health_display->SetString(std::to_string(GetHitPoints()) + "HP");
 	m_health_display->setPosition(sf::Vector2f(0.f, 50.f));
 	m_health_display->setRotation(-getRotation());
+
+	if (m_missile_display)
+	{
+		m_missile_display->setPosition(sf::Vector2f(0.f, 70.f));
+		if (m_missile_ammo == 0)
+		{
+			m_missile_display->SetString("");
+		}
+		else
+		{
+			m_missile_display->SetString("M: " + std::to_string(m_missile_ammo));
+		}
+	}
 }
 
-void Aircraft::SetAccelerating(bool accelerating)
+void Aircraft::UpdateMovementPattern(sf::Time dt)
 {
-	m_is_accelerating = accelerating;
+	//Enemy AI
+	const std::vector<Direction>& directions = Table[static_cast<int>(m_type)].m_directions;
+	if (!directions.empty())
+	{
+		//Move along the current direction for distance and then change direction
+		if (m_distance_travelled > directions[m_directions_index].m_distance)
+		{
+			m_directions_index = (m_directions_index + 1) % directions.size();
+			m_distance_travelled = 0;
+		}
+
+		//Compute the velocity
+		//Add 90 to move down the screen, 0 degrees is to the right
+		double radians = Utility::toRadians(directions[m_directions_index].m_angle + 90.f);
+		float vx = GetMaxSpeed() * std::cos(radians);
+		float vy = GetMaxSpeed() * std::sin(radians);
+
+		SetVelocity(sf::Vector2f(vx, vy));
+		m_distance_travelled += GetMaxSpeed() * dt.asSeconds();
+	}
 }
 
-void Aircraft::SetDecelerating(bool decelerating)
+float Aircraft::GetMaxSpeed() const
 {
-	m_is_decelerating = decelerating;
+	return Table[static_cast<int>(m_type)].m_speed;
 }
 
-void Aircraft::SetRotatingLeft(bool rotating)
+void Aircraft::Fire()
 {
-	m_is_rotating_left = rotating;
+	if (Table[static_cast<int>(m_type)].m_fire_interval != sf::Time::Zero)
+	{
+		m_is_firing = true;
+	}
 }
 
-void Aircraft::SetRotatingRight(bool rotating)
+void Aircraft::LaunchMissile()
 {
-	m_is_rotating_right = rotating;
+	if (m_missile_ammo > 0)
+	{
+		m_is_launching_missile = true;
+		--m_missile_ammo;
+	}
 }
 
-void Aircraft::UpdateCurrent(const sf::Time& dt)
+void Aircraft::CreateBullet(SceneNode& node, const TextureHolder& textures)
 {
-	const float delta_time = dt.asSeconds();
-
-	// Handle Speed of Player
-	if (m_is_accelerating)
+	ProjectileType type = IsAllied() ? ProjectileType::kAlliedBullet : ProjectileType::kEnemyBullet;
+	switch (m_spread_level)
 	{
-		m_current_speed = std::min(m_current_speed + kPlayerAcceleration * delta_time, kPlayerSpeed);
+	case 1:
+		if (m_is_firing)
+		{
+			CreateProjectile(node, type, 0.0f, 0.5f, textures);
+			m_is_firing = false;
+		}
+		break;
+	case 2:
+		if (m_is_firing)
+		{
+			CreateProjectile(node, type, -0.5f, 0.5f, textures);
+			CreateProjectile(node, type, 0.5f, 0.5f, textures);
+			m_is_firing = false;
+			break;
+		}
+	case 3:
+		if (m_is_firing)
+		{
+			CreateProjectile(node, type, 0.0f, 0.5f, textures);
+			CreateProjectile(node, type, -0.5f, 0.5f, textures);
+			CreateProjectile(node, type, 0.5f, 0.5f, textures);
+			m_is_firing = false;
+			break;
+		}
 	}
-	else if (m_is_decelerating)
+}
+
+void Aircraft::CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures)
+{
+	if (m_is_launching_missile || m_is_firing)
 	{
-		m_current_speed = std::max(m_current_speed - kPlayerDeceleration * delta_time, 0.f);
-	}
-	else
-	{
-		// Physics based drag: player starts losing speed if not accelerating
-		float drag_deceleration = (drag_coefficient * m_current_speed * m_current_speed) / kPlayerSpeed;
-		m_current_speed = std::max(m_current_speed - drag_deceleration * delta_time, 0.f);
+		std::unique_ptr<Projectile> projectile(new Projectile(type, textures));
+		sf::Vector2f offset(x_offset * m_sprite.getGlobalBounds().size.x, y_offset * m_sprite.getGlobalBounds().size.y);
+		sf::Vector2f velocity(0, projectile->GetMaxSpeed());
+
+		float sign = IsAllied() ? -1.f : 1.f;
+		projectile->setPosition(GetWorldPosition() + offset * sign);
+		projectile->SetVelocity(velocity * sign);
+		node.AttachChild(std::move(projectile));
+		m_is_launching_missile = false;
 	}
 
-	// Handle Rotation Speed
-	if (m_is_rotating_left)
-	{
-		m_rotation -= kPlayerRotationSpeed * delta_time;
-	}
-	if (m_is_rotating_right)
-	{
-		m_rotation += kPlayerRotationSpeed * delta_time;
-	}
+}
 
-	setRotation(sf::degrees(m_rotation + 180));
+sf::FloatRect Aircraft::GetBoundingRect() const
+{
+	return GetWorldTransform().transformRect(m_sprite.getGlobalBounds());
+}
 
-	// Starting at 90 for SFML, Calculating Players angle, converts to unit vector and moves the player
-	const float angle_rad = (m_rotation + 90.f) * kPieValue / 180.f;
-	sf::Vector2f direction(std::cos(angle_rad), std::sin(angle_rad));
-	move(direction * m_current_speed * delta_time);
+bool Aircraft::IsMarkedForRemoval() const
+{
+	return IsDestroyed() && (m_explosion.IsFinished() || !m_show_explosion);
+}
 
-	// Clear flags at the end of update - they're only true while input is active this frame
-	m_is_accelerating = false;
-	m_is_decelerating = false;
-	m_is_rotating_left = false;
-	m_is_rotating_right = false;
+void Aircraft::PlayLocalSound(CommandQueue& commands, SoundEffect effect)
+{
+	sf::Vector2f world_position = GetWorldPosition();
+
+	Command command;
+	command.category = static_cast<int>(ReceiverCategories::kSoundEffect);
+	command.action = DerivedAction<SoundNode>(
+		[effect, world_position](SoundNode& node, sf::Time)
+		{
+			node.PlaySound(effect, world_position);
+		});
+	commands.Push(command);
 }
 
 void Aircraft::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
-	target.draw(m_sprite, states);
+	if (IsDestroyed() && m_show_explosion)
+	{
+		target.draw(m_explosion, states);
+	}
+	else
+	{
+		target.draw(m_sprite, states);
+	}
+}
+
+void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
+{
+	if (IsDestroyed())
+	{
+		CheckPickupDrop(commands);
+		m_explosion.Update(dt);
+		//Play explosion sound only once
+		if (!m_explosion_began)
+		{
+			SoundEffect soundEffect = (Utility::RandomInt(2) == 0) ? SoundEffect::kExplosion1 : SoundEffect::kExplosion2;
+			PlayLocalSound(commands, soundEffect);
+			m_explosion_began = true;
+		}
+		m_is_marked_for_removal = true;
+		return;
+	}
+	Entity::UpdateCurrent(dt, commands);
+	UpdateTexts();
+	UpdateMovementPattern(dt);
+
+	UpdateRollAnimation();
+
+	//Check if bullets or missiles were fired
+	CheckProjectileLaunch(dt, commands);
+}
+
+void Aircraft::CheckProjectileLaunch(sf::Time dt, CommandQueue& commands)
+{
+	if (!IsAllied())
+	{
+		Fire();
+	}
+
+	if (m_is_firing && m_fire_countdown <= sf::Time::Zero)
+	{
+		PlayLocalSound(commands, IsAllied() ? SoundEffect::kEnemyGunfire : SoundEffect::kAlliedGunfire);
+		commands.Push(m_fire_command);
+		m_fire_countdown += Table[static_cast<int>(m_type)].m_fire_interval / (m_fire_rate + 1.f);
+	}
+	else if (m_fire_countdown > sf::Time::Zero)
+	{
+		m_fire_countdown -= dt;
+		m_is_firing = false;
+	}
+
+	//Missile launch
+	if (m_is_launching_missile)
+	{
+		PlayLocalSound(commands, SoundEffect::kLaunchMissile);
+		commands.Push(m_missile_command);
+		//m_is_launching_missile = false;
+	}
+}
+
+bool Aircraft::IsAllied() const
+{
+	return m_type == AircraftType::kEagle;
+}
+
+void Aircraft::CreatePickup(SceneNode& node, const TextureHolder& textures)
+{
+	if (!m_spawned_pickup)
+	{
+		auto type = static_cast<PickupType>(Utility::RandomInt(static_cast<int>(PickupType::kPickupCount)));
+		std::unique_ptr<Pickup> pickup(new Pickup(type, textures));
+		pickup->setPosition(GetWorldPosition());
+		pickup->SetVelocity(0.f, 0.f);
+		node.AttachChild(std::move(pickup));
+	}
+	m_spawned_pickup = true;
+}
+
+void Aircraft::CheckPickupDrop(CommandQueue& commands)
+{
+	if (!IsAllied() && Utility::RandomInt(kPickupDropChance) == 0 && !m_spawned_pickup)
+	{
+		commands.Push(m_drop_pickup_command);
+	}
+}
+
+void Aircraft::UpdateRollAnimation()
+{
+	if (Table[static_cast<int>(m_type)].m_has_roll_animation)
+	{
+		sf::IntRect textureRect = Table[static_cast<int>(m_type)].m_texture_rect;
+
+		//Roll left: Texture rect is offset once
+		if (GetVelocity().x < 0.f)
+		{
+			textureRect.position.x += textureRect.size.x;
+		}
+		else if (GetVelocity().x > 0.f)
+		{
+			textureRect.position.x += 2 * textureRect.size.x;
+		}
+		m_sprite.setTextureRect(textureRect);
+
+	}
 }

@@ -1,9 +1,11 @@
 #pragma once
 enum class Action
 {
-	kRotateLeft,
-	kRotateRight,
-	kAccelerate,
-	kDecelerate,
+	kMoveLeft,
+	kMoveRight,
+	kMoveUp,
+	kMoveDown,
+	kBulletFire,
+	kMissileFire,
 	kActionCount
 };

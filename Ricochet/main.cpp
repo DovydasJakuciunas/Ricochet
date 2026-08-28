@@ -1,10 +1,9 @@
-#include <iostream>
 #include "application.hpp"
 #include <iostream>
 
 int main()
 {
-	try 
+	try
 	{
 		Application app;
 		app.Run();

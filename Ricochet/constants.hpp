@@ -1,8 +1,8 @@
 #pragma once
-constexpr auto kPlayerSpeed = 200.f;           
-constexpr auto kPlayerAcceleration = 100.f;    
-constexpr auto kPlayerDeceleration = 80.f;     
-constexpr auto kPlayerRotationSpeed = 90.f;   
+constexpr auto kPlayerSpeed = 100.f;
 constexpr auto kTimePerFrame = 1.f / 60.f;
-constexpr auto kPieValue = 3.14159265358979323846f;
-constexpr auto drag_coefficient = 0.75f;	
+constexpr auto kMaxFireRate = 5;
+constexpr auto kMaxSpread = 3;
+constexpr auto kPickupDropChance = 3;
+constexpr auto kMissileRefill = 3;
+constexpr auto kGameOverToMenuPause = 3;

@@ -1,8 +1,24 @@
 #pragma once
-enum class TextureID {
+enum class TextureID
+{
 	kLandscape,
-	kAlphaPlayer,
-	kBetaPlayer,
+	kEagle,
+	kRaptor,
 	kTitleScreen,
-	kNumTextures
+	kButtonNormal,
+	kButtonSelected,
+	kButtonActivated,
+	kBullet,
+	kMissile,
+	kHealthRefill,
+	kMissileRefill,
+	kFireSpread,
+	kFireRate,
+	kFinishLine,
+	kEntities,
+	kButtons,
+	kExplosion,
+	kJungle,
+	kParticle,
+	kNumTextures,
 };

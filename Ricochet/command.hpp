@@ -1,24 +1,22 @@
 #pragma once
 #include <functional>
-#include <cassert>
 #include "receiver_categories.hpp"
 #include <SFML/System/Time.hpp>
 
 class SceneNode;
 
-
 struct Command
 {
 	Command();
-	std::function<void(SceneNode&, const sf::Time&)> action;
+	std::function<void(SceneNode&, sf::Time)> action;
 	unsigned int category;
 };
 
 template<typename GameObject, typename Function>
-std::function<void(SceneNode&, const sf::Time&)>
+std::function<void(SceneNode&, sf::Time)>
 DerivedAction(Function fn)
 {
-	return [=](SceneNode& node, const sf::Time& dt)
+	return [=](SceneNode& node, sf::Time dt)
 		{
 			//Check is the cast sage
 			assert(dynamic_cast<GameObject*>(&node) != nullptr);
@@ -26,3 +24,4 @@ DerivedAction(Function fn)
 			fn(static_cast<GameObject&>(node), dt);
 		};
 }
+

@@ -4,8 +4,11 @@
 #include "player.hpp"
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "stateid.hpp"
+#include "music_player.hpp"
+#include "sound_player.hpp"
 
 class StateStack;
+
 
 class State
 {
@@ -14,12 +17,14 @@ public:
 
 	struct Context
 	{
-		Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player);
+		Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player, MusicPlayer& music, SoundPlayer& sound);
 		//TODO unique_ptr rather than raw pointers here?
 		sf::RenderWindow* window;
 		TextureHolder* textures;
 		FontHolder* fonts;
 		Player* player;
+		MusicPlayer* music;
+		SoundPlayer* sound;
 	};
 
 public:
@@ -40,3 +45,4 @@ private:
 	StateStack* m_stack;
 	Context m_context;
 };
+

@@ -2,39 +2,73 @@
 #include "entity.hpp"
 #include "aircraft_type.hpp"
 #include "resource_identifiers.hpp"
-#include "receiver_categories.hpp"
 #include "text_node.hpp"
+#include "projectile_type.hpp"
+#include "command_queue.hpp"
+#include "animation.hpp"
 
-class Aircraft : public Entity 
+class Aircraft : public Entity
 {
 public:
 	Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts);
 	unsigned int GetCategory() const override;
 
-	void SetAccelerating(bool accelerating);
-	void SetDecelerating(bool decelerating);
-	void SetRotatingLeft(bool rotating);
-	void SetRotatingRight(bool rotating);
+	void IncreaseFireRate();
+	void IncreaseFireSpread();
+	void CollectMissile(unsigned int count);
 
 	void UpdateTexts();
+	void UpdateMovementPattern(sf::Time dt);
+
+	float GetMaxSpeed() const;
+	void Fire();
+	void LaunchMissile();
+	void CreateBullet(SceneNode& node, const TextureHolder& textures);
+	void CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures);
+
+	sf::FloatRect GetBoundingRect() const override;
+	bool IsMarkedForRemoval() const override;
+	void PlayLocalSound(CommandQueue& commands, SoundEffect effect);
 
 private:
-	virtual void UpdateCurrent(const sf::Time& dt) override;
 	virtual void DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const;
+	virtual void UpdateCurrent(sf::Time dt, CommandQueue& commands) override;
+
+	void CheckProjectileLaunch(sf::Time dt, CommandQueue& commands);
+	bool IsAllied() const;
+	void CreatePickup(SceneNode& node, const TextureHolder& textures);
+	void CheckPickupDrop(CommandQueue& commands);
+	void UpdateRollAnimation();
 
 private:
 	AircraftType m_type;
 	sf::Sprite m_sprite;
-	float m_current_speed = 0.f;
-	float m_rotation = 0.f;
-	bool m_is_accelerating = false;
-	bool m_is_decelerating = false;
-	bool m_is_rotating_left = false;
-	bool m_is_rotating_right = false;
+	Animation m_explosion;
 
 	TextNode* m_health_display;
-	float m_distance_travelled = 0.f;
+	TextNode* m_missile_display;
+
+	float m_distance_travelled;
 	int m_directions_index;
+
+	Command m_fire_command;
+	Command m_missile_command;
+	Command m_drop_pickup_command;
+
+	unsigned int m_fire_rate;
+	unsigned int m_spread_level;
+	unsigned int m_missile_ammo;
+
+	bool m_is_firing;
+	bool m_is_launching_missile;
+	bool m_spawned_pickup;
+
+
+	sf::Time m_fire_countdown;
+
+	bool m_is_marked_for_removal;
+	bool m_show_explosion;
+	bool m_explosion_began;
 
 };
 

@@ -1,4 +1,4 @@
-#include "entity.hpp"
+#include "Entity.hpp"
 #include "command_queue.hpp"
 
 Entity::Entity(int hitpoints) :m_hitpoints(hitpoints)
@@ -37,15 +37,9 @@ int Entity::GetHitPoints() const
 	return m_hitpoints;
 }
 
-void Entity::SetHitpoints(int points)
-{
-	//assert(points > 0);
-	m_hitpoints = points;
-}
-
 void Entity::Repair(int points)
 {
-	assert(points >= 0);
+	assert(points > 0);
 	m_hitpoints += points;
 }
 
@@ -68,9 +62,4 @@ bool Entity::IsDestroyed() const
 void Entity::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 {
 	move(m_velocity * dt.asSeconds());
-}
-
-void Entity::Remove()
-{
-	Destroy();
 }

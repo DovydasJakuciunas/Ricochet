@@ -5,15 +5,15 @@
 #include "title_state.hpp"
 #include "menu_state.hpp"
 #include "pause_state.hpp"
+#include "settings_state.hpp"
+#include "game_over_state.hpp"
 
-Application::Application() : m_window(sf::VideoMode({ 1024, 768 }), "States", sf::Style::Close), m_textures(), m_fonts(), m_stack(State::Context(m_window, m_textures, m_fonts, m_player))
+Application::Application() : m_window(sf::VideoMode({ 1024, 768 }), "States", sf::Style::Close), m_stack(State::Context(m_window, m_textures, m_fonts, m_player, m_music, m_sound))
 {
 	m_window.setKeyRepeatEnabled(false);
-
-	// Load all resources BEFORE creating any states to ensure ResourceHolders are properly initialized
 	m_fonts.Load(FontID::kMain, "Media/Fonts/Sansation.ttf");
-	m_textures.Load(TextureID::kAlphaPlayer, "Media/Textures/AlphaPlayer.png");
 	m_textures.Load(TextureID::kTitleScreen, "Media/Textures/TitleScreen.png");
+	m_textures.Load(TextureID::kButtons, "Media/Textures/Buttons.png");
 
 	RegisterStates();
 	m_stack.PushState(StateID::kTitle);
@@ -73,5 +73,8 @@ void Application::RegisterStates()
 	m_stack.RegisterState<MenuState>(StateID::kMenu);
 	m_stack.RegisterState<GameState>(StateID::kGame);
 	m_stack.RegisterState<PauseState>(StateID::kPause);
+	m_stack.RegisterState<SettingsState>(StateID::kSettings);
+	m_stack.RegisterState<GameOverState>(StateID::kGameOver);
 }
+
 

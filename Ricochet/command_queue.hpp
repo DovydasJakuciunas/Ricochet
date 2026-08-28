@@ -12,3 +12,4 @@ public:
 private:
 	std::queue<Command> m_queue;
 };
+

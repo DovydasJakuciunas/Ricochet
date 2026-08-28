@@ -4,7 +4,8 @@
 #include "action.hpp"
 #include <map>
 #include "command.hpp"
-#include "constants.hpp"
+#include "mission_status.hpp"
+
 
 class Player
 {
@@ -15,6 +16,8 @@ public:
 
 	void AssignKey(Action action, sf::Keyboard::Scancode key);
 	sf::Keyboard::Scancode GetAssignedKey(Action action) const;
+	void SetMissionStatus(MissionStatus status);
+	MissionStatus GetMissionStatus() const;
 
 private:
 	void InitialiseActions();
@@ -23,5 +26,6 @@ private:
 private:
 	std::map<sf::Keyboard::Scancode, Action> m_key_binding;
 	std::map<Action, Command> m_action_binding;
+	MissionStatus m_current_mission_status;
 };
 

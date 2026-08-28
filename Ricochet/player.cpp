@@ -1,130 +1,128 @@
 #include "player.hpp"
 #include "aircraft.hpp"
-#include "constants.hpp"
-#include <cmath>
 
-struct AircraftRotator
+struct AircraftMover
 {
-	AircraftRotator(bool rotating_left) : m_rotating_left(rotating_left) {}
-	void operator()(Aircraft& aircraft, sf::Time) const
-	{
-		if (m_rotating_left)
-		{
-			aircraft.SetRotatingLeft(true);
-		}
-		else
-		{
-			aircraft.SetRotatingRight(true);
-		}
-	}
+    AircraftMover(float vx, float vy) : velocity(vx, vy) {}
+    void operator()(Aircraft& aircraft, sf::Time) const
+    {
+        aircraft.Accelerate(velocity);
+    }
 
-	bool m_rotating_left;
-};
-
-struct AircraftAccelerator
-{
-	AircraftAccelerator(bool accelerating) : m_accelerating(accelerating) {}
-	void operator()(Aircraft& aircraft, sf::Time) const
-	{
-		if (m_accelerating)
-		{
-			aircraft.SetAccelerating(true);
-		}
-		else
-		{
-			aircraft.SetDecelerating(true);
-		}
-	}
-
-	bool m_accelerating;
+    sf::Vector2f velocity;
 };
 
 Player::Player()
 {
-	m_key_binding[sf::Keyboard::Scancode::A] = Action::kRotateLeft;
-	m_key_binding[sf::Keyboard::Scancode::D] = Action::kRotateRight;
-	m_key_binding[sf::Keyboard::Scancode::W] = Action::kAccelerate;
-	m_key_binding[sf::Keyboard::Scancode::S] = Action::kDecelerate;
+    m_key_binding[sf::Keyboard::Scancode::A] = Action::kMoveLeft;
+    m_key_binding[sf::Keyboard::Scancode::D] = Action::kMoveRight;
+    m_key_binding[sf::Keyboard::Scancode::W] = Action::kMoveUp;
+    m_key_binding[sf::Keyboard::Scancode::S] = Action::kMoveDown;
+    m_key_binding[sf::Keyboard::Scancode::Space] = Action::kBulletFire;
+    m_key_binding[sf::Keyboard::Scancode::M] = Action::kMissileFire;
 
-	InitialiseActions();
+    InitialiseActions();
 
-	for (auto& pair : m_action_binding)
-	{
-		pair.second.category = static_cast<unsigned int>(ReceiverCategories::kLocalPlayer);
-	}
+    for (auto& pair : m_action_binding)
+    {
+        pair.second.category = static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
+    }
 }
 
 void Player::HandleEvent(const sf::Event& event, CommandQueue& command_queue)
 {
-	const auto* key_pressed = event.getIf<sf::Event::KeyPressed>();
-	if (key_pressed)
-	{
-		auto found = m_key_binding.find(key_pressed->scancode);
-		if (found != m_key_binding.end() && !IsRealTimeAction(found->second))
-		{
-			command_queue.Push(m_action_binding[found->second]);
-		}
-	}
+    const auto* key_pressed = event.getIf<sf::Event::KeyPressed>();
+    if (key_pressed)
+    {
+        auto found = m_key_binding.find(key_pressed->scancode);
+        if (found != m_key_binding.end() && !IsRealTimeAction(found->second))
+        {
+            command_queue.Push(m_action_binding[found->second]);
+        }
+    }
 }
 
 void Player::HandleRealTimeInput(CommandQueue& command_queue)
 {
-	for (auto pair : m_key_binding)
-	{
-		if(sf::Keyboard::isKeyPressed(pair.first) && IsRealTimeAction(pair.second))
-		{
-			command_queue.Push(m_action_binding[pair.second]);
-		}
-	}
+    for (auto pair : m_key_binding)
+    {
+        if (sf::Keyboard::isKeyPressed(pair.first) && IsRealTimeAction(pair.second))
+        {
+            command_queue.Push(m_action_binding[pair.second]);
+        }
+    }
 }
 
 void Player::AssignKey(Action action, sf::Keyboard::Scancode key)
 {
-	for (auto itr = m_key_binding.begin(); itr != m_key_binding.end();)
-	{
-		if (itr->second == action)
-		{
-			m_key_binding.erase(itr++);
-		}
-		else
-		{
-			++itr;
-		}
-	}
-	m_key_binding[key] = action;
+    //Remove keys that are currently bound to the action
+    for (auto itr = m_key_binding.begin(); itr != m_key_binding.end();)
+    {
+        if (itr->second == action)
+        {
+            m_key_binding.erase(itr++);
+        }
+        else
+        {
+            ++itr;
+        }
+    }
+    m_key_binding[key] = action;
 }
 
 sf::Keyboard::Scancode Player::GetAssignedKey(Action action) const
 {
-	for (auto pair : m_key_binding)
-	{
-		if (pair.second == action)
-		{
-			return pair.first;
-		}
-	}
-	return sf::Keyboard::Scancode::Unknown;
+    for (auto pair : m_key_binding)
+    {
+        if (pair.second == action)
+        {
+            return pair.first;
+        }
+    }
+    return sf::Keyboard::Scancode::Unknown;
+}
+
+void Player::SetMissionStatus(MissionStatus status)
+{
+    m_current_mission_status = status;
+}
+
+MissionStatus Player::GetMissionStatus() const
+{
+    return m_current_mission_status;
 }
 
 void Player::InitialiseActions()
 {
-	m_action_binding[Action::kRotateLeft].action = DerivedAction<Aircraft>(AircraftRotator(true));
-	m_action_binding[Action::kRotateRight].action = DerivedAction<Aircraft>(AircraftRotator(false));
-	m_action_binding[Action::kAccelerate].action = DerivedAction<Aircraft>(AircraftAccelerator(true));
-	m_action_binding[Action::kDecelerate].action = DerivedAction<Aircraft>(AircraftAccelerator(false));
+    const float kPlayerSpeed = 200.f;
+    m_action_binding[Action::kMoveLeft].action = DerivedAction<Aircraft>(AircraftMover(-kPlayerSpeed, 0.f));
+    m_action_binding[Action::kMoveRight].action = DerivedAction<Aircraft>(AircraftMover(kPlayerSpeed, 0.f));
+    m_action_binding[Action::kMoveUp].action = DerivedAction<Aircraft>(AircraftMover(0.f, -kPlayerSpeed));
+    m_action_binding[Action::kMoveDown].action = DerivedAction<Aircraft>(AircraftMover(0.f, kPlayerSpeed));
+    m_action_binding[Action::kBulletFire].action = DerivedAction<Aircraft>([](Aircraft& a, sf::Time dt)
+        {
+            a.Fire();
+        }
+    );
+    m_action_binding[Action::kMissileFire].action = DerivedAction<Aircraft>([](Aircraft& a, sf::Time dt)
+        {
+            a.LaunchMissile();
+        }
+    );
+
 }
 
 bool Player::IsRealTimeAction(Action action)
 {
-	switch (action)
-	{
-	case Action::kRotateLeft:
-	case Action::kRotateRight:
-	case Action::kAccelerate:
-	case Action::kDecelerate:
-		return true;
-	default:
-		return false;
-	}
-	return false;
+    switch (action)
+    {
+    case Action::kMoveLeft:
+    case Action::kMoveRight:
+    case Action::kMoveUp:
+    case Action::kMoveDown:
+    case Action::kBulletFire:
+        return true;
+    default:
+        return false;
+    }
 }
