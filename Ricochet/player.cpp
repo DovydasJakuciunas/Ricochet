@@ -12,6 +12,35 @@ struct AircraftMover
     sf::Vector2f velocity;
 };
 
+struct AircraftRotator
+{
+    AircraftRotator(float rotation) : rotation(rotation) {}
+    void operator()(Aircraft& aircraft, sf::Time) const
+    {
+        aircraft.rotate(sf::degrees(rotation));
+    }
+
+    float rotation;
+};
+
+struct AircraftForwardMover
+{
+    void operator()(Aircraft& aircraft, sf::Time dt) const
+    {
+        // Get max speed from aircraft's data tables
+        float speed = aircraft.GetMaxSpeed();
+
+        // Get aircraft's current rotation and convert to velocity vector
+        double radians = Utility::toRadians(aircraft.getRotation().asDegrees() + 90.f);
+
+        // Set velocity instantly to max speed in the direction the aircraft is facing
+        float vx = -speed * std::cos(radians);
+        float vy = -speed * std::sin(radians);
+
+        aircraft.SetVelocity(vx, vy);
+    }
+};
+
 Player::Player()
 {
     m_key_binding[sf::Keyboard::Scancode::A] = Action::kMoveLeft;
@@ -94,11 +123,9 @@ MissionStatus Player::GetMissionStatus() const
 
 void Player::InitialiseActions()
 {
-    const float kPlayerSpeed = 200.f;
-    m_action_binding[Action::kMoveLeft].action = DerivedAction<Aircraft>(AircraftMover(-kPlayerSpeed, 0.f));
-    m_action_binding[Action::kMoveRight].action = DerivedAction<Aircraft>(AircraftMover(kPlayerSpeed, 0.f));
-    m_action_binding[Action::kMoveUp].action = DerivedAction<Aircraft>(AircraftMover(0.f, -kPlayerSpeed));
-    m_action_binding[Action::kMoveDown].action = DerivedAction<Aircraft>(AircraftMover(0.f, kPlayerSpeed));
+    m_action_binding[Action::kMoveLeft].action = DerivedAction<Aircraft>(AircraftRotator(-kRotationSpeed));
+    m_action_binding[Action::kMoveRight].action = DerivedAction<Aircraft>(AircraftRotator(kRotationSpeed));
+    m_action_binding[Action::kMoveUp].action = DerivedAction<Aircraft>(AircraftForwardMover());
     m_action_binding[Action::kBulletFire].action = DerivedAction<Aircraft>([](Aircraft& a, sf::Time dt)
         {
             a.Fire();

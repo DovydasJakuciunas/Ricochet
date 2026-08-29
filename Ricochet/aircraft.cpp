@@ -138,30 +138,6 @@ void Aircraft::UpdateTexts()
 	}
 }
 
-void Aircraft::UpdateMovementPattern(sf::Time dt)
-{
-	//Enemy AI
-	const std::vector<Direction>& directions = Table[static_cast<int>(m_type)].m_directions;
-	if (!directions.empty())
-	{
-		//Move along the current direction for distance and then change direction
-		if (m_distance_travelled > directions[m_directions_index].m_distance)
-		{
-			m_directions_index = (m_directions_index + 1) % directions.size();
-			m_distance_travelled = 0;
-		}
-
-		//Compute the velocity
-		//Add 90 to move down the screen, 0 degrees is to the right
-		double radians = Utility::toRadians(directions[m_directions_index].m_angle + 90.f);
-		float vx = GetMaxSpeed() * std::cos(radians);
-		float vy = GetMaxSpeed() * std::sin(radians);
-
-		SetVelocity(sf::Vector2f(vx, vy));
-		m_distance_travelled += GetMaxSpeed() * dt.asSeconds();
-	}
-}
-
 float Aircraft::GetMaxSpeed() const
 {
 	return Table[static_cast<int>(m_type)].m_speed;
@@ -287,7 +263,6 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 	}
 	Entity::UpdateCurrent(dt, commands);
 	UpdateTexts();
-	UpdateMovementPattern(dt);
 
 	UpdateRollAnimation();
 

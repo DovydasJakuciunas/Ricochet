@@ -81,11 +81,6 @@ bool World::HasAlivePlayer() const
 	return !m_player_aircraft->IsMarkedForRemoval();
 }
 
-bool World::HasPlayerReachedEnd() const
-{
-	return !m_world_bounds.contains(m_player_aircraft->getPosition());
-}
-
 void World::LoadTextures()
 {
 	m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
@@ -202,46 +197,47 @@ sf::FloatRect World::GetBattleFieldBounds() const
 
 void World::GuideMissiles()
 {
-	//Target the closest enemy in the world
-	Command enemyCollector;
-	enemyCollector.category = static_cast<int>(ReceiverCategories::kEnemyAircraft);
-	enemyCollector.action = DerivedAction<Aircraft>([this](Aircraft& enemy, sf::Time)
-		{
-			if (!enemy.IsDestroyed())
-			{
-				m_active_enemies.emplace_back(&enemy);
-			}
-		});
+	//TODO - Change this so it targets the other player
+	////Target the closest enemy in the world
+	//Command enemyCollector;
+	//enemyCollector.category = static_cast<int>(ReceiverCategories::kEnemyAircraft);
+	//enemyCollector.action = DerivedAction<Aircraft>([this](Aircraft& enemy, sf::Time)
+	//	{
+	//		if (!enemy.IsDestroyed())
+	//		{
+	//			m_active_enemies.emplace_back(&enemy);
+	//		}
+	//	});
 
-	Command missileGuider;
-	missileGuider.category = static_cast<int>(ReceiverCategories::kAlliedProjectile);
-	missileGuider.action = DerivedAction<Projectile>([this](Projectile& missile, sf::Time)
-		{
-			if (!missile.IsGuided())
-			{
-				return;
-			}
+	//Command missileGuider;
+	//missileGuider.category = static_cast<int>(ReceiverCategories::kAlliedProjectile);
+	//missileGuider.action = DerivedAction<Projectile>([this](Projectile& missile, sf::Time)
+	//	{
+	//		if (!missile.IsGuided())
+	//		{
+	//			return;
+	//		}
 
-			float min_distance = std::numeric_limits<float>::max();
-			Aircraft* closest_enemy = nullptr;
+	//		float min_distance = std::numeric_limits<float>::max();
+	//		Aircraft* closest_enemy = nullptr;
 
-			for (Aircraft* enemy : m_active_enemies)
-			{
-				float enemy_distance = Distance(missile, *enemy);
-				if (enemy_distance < min_distance)
-				{
-					closest_enemy = enemy;
-					min_distance = enemy_distance;
-				}
-			}
-			if (closest_enemy)
-			{
-				missile.GuideTowards(closest_enemy->GetWorldPosition());
-			}
-		});
-	m_command_queue.Push(enemyCollector);
-	m_command_queue.Push(missileGuider);
-	m_active_enemies.clear();
+	//		for (Aircraft* enemy : m_active_enemies)
+	//		{
+	//			float enemy_distance = Distance(missile, *enemy);
+	//			if (enemy_distance < min_distance)
+	//			{
+	//				closest_enemy = enemy;
+	//				min_distance = enemy_distance;
+	//			}
+	//		}
+	//		if (closest_enemy)
+	//		{
+	//			missile.GuideTowards(closest_enemy->GetWorldPosition());
+	//		}
+	//	});
+	//m_command_queue.Push(enemyCollector);
+	//m_command_queue.Push(missileGuider);
+	//m_active_enemies.clear();
 }
 
 bool MatchesCategories(SceneNode::Pair& colliders, ReceiverCategories type1, ReceiverCategories type2)

@@ -5,7 +5,9 @@
 #include <map>
 #include "command.hpp"
 #include "mission_status.hpp"
-
+#include "constants.hpp"
+#include "utility.hpp"
+#include <cmath>
 
 class Player
 {

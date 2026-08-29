@@ -18,7 +18,7 @@ public:
 	void CollectMissile(unsigned int count);
 
 	void UpdateTexts();
-	void UpdateMovementPattern(sf::Time dt);
+
 
 	float GetMaxSpeed() const;
 	void Fire();
