@@ -73,6 +73,16 @@ void Projectile::UpdateCurrent(sf::Time dt, CommandQueue& commands)
         setRotation(sf::degrees(Utility::ToDegrees(angle) + 90.f));
         SetVelocity(new_velocity);
     }
+    else
+    {
+        // Rotate all non-guided projectiles to face their velocity direction
+        sf::Vector2f velocity = GetVelocity();
+        if (velocity.x != 0.f || velocity.y != 0.f)
+        {
+            float angle = std::atan2(velocity.y, velocity.x);
+            setRotation(sf::degrees(Utility::ToDegrees(angle) + 90.f));
+        }
+    }
     Entity::UpdateCurrent(dt, commands);
 }
 
