@@ -37,9 +37,10 @@ private:
 
 	void HandleCollisions();
 
-	void DestroyEntitiesOutsideView();
-
 	void UpdateSounds();
+
+	void BounceProjectiles();
+	void BounceEntity(SceneNode* entity);
 
 private:
 	struct SpawnPoint
@@ -67,6 +68,7 @@ private:
 	Aircraft* m_player_aircraft;
 
 	CommandQueue m_command_queue;
+	Command m_command;
 
 	std::vector<SpawnPoint> m_enemy_spawn_points;
 	std::vector<Aircraft*> m_active_enemies;

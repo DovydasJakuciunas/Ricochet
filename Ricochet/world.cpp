@@ -9,6 +9,7 @@
 #include "particle_node.hpp"
 #include "particletype.hpp"
 #include "sound_node.hpp"
+#include "entity.hpp"
 
 World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sounds)
 	: m_target(output_target)
@@ -18,7 +19,7 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_sounds(sounds)
 	, m_scene_graph(ReceiverCategories::kNone)
 	, m_scene_layers()
-	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, 3000.f))
+	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, m_camera.getSize().y))
 	, m_spawn_position(Utility::RandomFloat(0.f, m_camera.getSize().x), Utility::RandomFloat(0.f, m_camera.getSize().y))
 	, m_player_aircraft(nullptr)
 {
@@ -30,12 +31,9 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 
 void World::Update(sf::Time dt)
 {
-	//Scroll the world
-	
 
 	m_player_aircraft->SetVelocity(0.f, 0.f);
 
-	DestroyEntitiesOutsideView();
 	GuideMissiles();
 
 	UpdateSounds();
@@ -51,6 +49,8 @@ void World::Update(sf::Time dt)
 	m_scene_graph.RemoveWrecks();
 
 	m_scene_graph.Update(dt, m_command_queue);
+
+	BounceProjectiles();
 	AdaptPlayerPosition();
 }
 
@@ -148,17 +148,42 @@ void World::AdaptPlayerVelocity()
 
 void World::AdaptPlayerPosition()
 {
-	//keep player on the screen
+	// Keep player within the camera view bounds with a border
 	sf::FloatRect view_bounds(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());
 	const float border_distance = 40.f;
 
 	sf::Vector2f position = m_player_aircraft->getPosition();
-	position.x = std::min(position.x, view_bounds.size.x - border_distance);
-	position.x = std::max(position.x, border_distance);
-	position.y = std::min(position.y, view_bounds.position.y + view_bounds.size.y - border_distance);
-	position.y = std::max(position.y, view_bounds.position.y + border_distance);
-	m_player_aircraft->setPosition(position);
+	sf::FloatRect player_bounds = m_player_aircraft->GetBoundingRect();
 
+	// Bounce player off left and right edges
+	if (player_bounds.position.x <= view_bounds.position.x + border_distance)
+	{
+		// Hit left boundary - bounce right
+		position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
+		m_player_aircraft->GetVelocity().x > 0 ? void() : m_player_aircraft->SetVelocity(std::abs(m_player_aircraft->GetVelocity().x), m_player_aircraft->GetVelocity().y);
+	}
+	else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
+	{
+		// Hit right boundary - bounce left
+		position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
+		m_player_aircraft->GetVelocity().x < 0 ? void() : m_player_aircraft->SetVelocity(-std::abs(m_player_aircraft->GetVelocity().x), m_player_aircraft->GetVelocity().y);
+	}
+
+	// Bounce player off top and bottom edges
+	if (player_bounds.position.y <= view_bounds.position.y + border_distance)
+	{
+		// Hit top boundary - bounce down
+		position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
+		m_player_aircraft->GetVelocity().y > 0 ? void() : m_player_aircraft->SetVelocity(m_player_aircraft->GetVelocity().x, std::abs(m_player_aircraft->GetVelocity().y));
+	}
+	else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
+	{
+		// Hit bottom boundary - bounce up
+		position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
+		m_player_aircraft->GetVelocity().y < 0 ? void() : m_player_aircraft->SetVelocity(m_player_aircraft->GetVelocity().x, -std::abs(m_player_aircraft->GetVelocity().y));
+	}
+
+	m_player_aircraft->setPosition(position);
 }
 
 sf::FloatRect World::GetViewBounds() const
@@ -275,22 +300,6 @@ void World::HandleCollisions()
 	}
 }
 
-void World::DestroyEntitiesOutsideView()
-{
-	Command command;
-	command.category = static_cast<int>(ReceiverCategories::kEnemyAircraft) | static_cast<int>(ReceiverCategories::kProjectile);
-	command.action = DerivedAction<Entity>([this](Entity& e, sf::Time dt)
-		{
-			//Does the object intersect with the battlefield
-			if (GetBattleFieldBounds().findIntersection(e.GetBoundingRect()) == std::nullopt)
-			{
-				e.Destroy();
-			}
-		});
-	m_command_queue.Push(command);
-
-}
-
 void World::UpdateSounds()
 {
 	sf::Vector2f listener_position;
@@ -300,6 +309,67 @@ void World::UpdateSounds()
 	m_sounds.SetListenerPosition(listener_position);
 
 	m_sounds.RemoveStoppedSounds();
+}
+
+void World::BounceProjectiles()
+{
+	// Apply bouncing to all projectiles in the scene
+	Command projectileBouncer;
+	projectileBouncer.category = static_cast<int>(ReceiverCategories::kProjectile);
+	projectileBouncer.action = DerivedAction<SceneNode>([this](SceneNode& node, sf::Time)
+		{
+			BounceEntity(&node);
+		});
+	m_command_queue.Push(projectileBouncer);
+}
+
+void World::BounceEntity(SceneNode* entity)
+{
+	if (!entity)
+		return;
+
+	// Get entity bounds and velocity
+	sf::FloatRect bounds = entity->GetBoundingRect();
+
+	// Cast to Entity to access velocity methods
+	Entity* moving_entity = dynamic_cast<Entity*>(entity);
+	if (!moving_entity)
+		return;
+
+	sf::Vector2f velocity = moving_entity->GetVelocity();
+	sf::Vector2f position = entity->getPosition();
+
+	// Check collision with left and right walls
+	if (bounds.position.x <= m_world_bounds.position.x)
+	{
+		// Hit left wall - bounce back right
+		velocity.x = std::abs(velocity.x);
+		position.x = m_world_bounds.position.x + (bounds.size.x / 2.f);
+	}
+	else if (bounds.position.x + bounds.size.x >= m_world_bounds.position.x + m_world_bounds.size.x)
+	{
+		// Hit right wall - bounce back left
+		velocity.x = -std::abs(velocity.x);
+		position.x = m_world_bounds.position.x + m_world_bounds.size.x - (bounds.size.x / 2.f);
+	}
+
+	// Check collision with top and bottom walls
+	if (bounds.position.y <= m_world_bounds.position.y)
+	{
+		// Hit top wall - bounce down
+		velocity.y = std::abs(velocity.y);
+		position.y = m_world_bounds.position.y + (bounds.size.y / 2.f);
+	}
+	else if (bounds.position.y + bounds.size.y >= m_world_bounds.position.y + m_world_bounds.size.y)
+	{
+		// Hit bottom wall - bounce up
+		velocity.y = -std::abs(velocity.y);
+		position.y = m_world_bounds.position.y + m_world_bounds.size.y - (bounds.size.y / 2.f);
+	}
+
+	// Apply new velocity and position
+	moving_entity->SetVelocity(velocity);
+	entity->setPosition(position);
 }
 
 
