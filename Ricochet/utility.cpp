@@ -66,6 +66,12 @@ int Utility::RandomInt(int exclusive_max)
     return distr(RandomEngine);
 }
 
+float Utility::RandomFloat(float min, float max)
+{
+    std::uniform_real_distribution<float> distr(min, max);
+    return distr(RandomEngine);
+}
+
 int Utility::Length(sf::Vector2f vector)
 {
     return sqrtf(powf(vector.x, 2) + powf(vector.y, 2));

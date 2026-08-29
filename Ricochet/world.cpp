@@ -1,7 +1,7 @@
 #include "world.hpp"
 #include "sprite_node.hpp"
 #include <iostream>
-#include <filesystem>
+#include <random>
 #include "state.hpp"
 #include <SFML/System/Angle.hpp>
 #include "Projectile.hpp"
@@ -19,14 +19,13 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_scene_graph(ReceiverCategories::kNone)
 	, m_scene_layers()
 	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, 3000.f))
-	, m_spawn_position(m_camera.getSize().x / 2.f, m_world_bounds.size.y - m_camera.getSize().y / 2.f)
-	, m_scroll_speed(-100.f)
+	, m_spawn_position(Utility::RandomFloat(0.f, m_camera.getSize().x), Utility::RandomFloat(0.f, m_camera.getSize().y))
 	, m_player_aircraft(nullptr)
 {
 	m_scene_texture.resize({ m_target.getSize().x, m_target.getSize().y });
 	LoadTextures();
+
 	BuildScene();
-	m_camera.setCenter(m_spawn_position);
 }
 
 void World::Update(sf::Time dt)
@@ -55,8 +54,6 @@ void World::Update(sf::Time dt)
 	AdaptPlayerPosition();
 }
 
-
-
 void World::Draw()
 {
 	if (PostEffect::IsSupported())
@@ -65,9 +62,6 @@ void World::Draw()
 		m_scene_texture.setView(m_camera);
 		m_scene_texture.draw(m_scene_graph);
 		m_scene_texture.display();
-
-		// Reduce bloom intensity to make it less obvious on the background
-		m_bloom_effect.SetIntensity(0.6f);
 		m_bloom_effect.Apply(m_scene_texture, m_target);
 	}
 	else
@@ -76,8 +70,6 @@ void World::Draw()
 		m_target.draw(m_scene_graph);
 	}
 }
-
-
 
 CommandQueue& World::GetCommandQueue()
 {
@@ -96,28 +88,11 @@ bool World::HasPlayerReachedEnd() const
 
 void World::LoadTextures()
 {
-	try
-	{
-
-		m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
-		m_textures.Load(TextureID::kExplosion, "Media/Textures/Explosion.png");
-		m_textures.Load(TextureID::kBackground, "Media/Textures/Background.png");
-		m_textures.Load(TextureID::kParticle, "Media/Textures/Particle.png");
-	}
-	catch (const std::runtime_error& error)
-	{
-		std::cerr << "[ResourceLoader] CRITICAL ERROR during texture loading:" << std::endl;
-		std::cerr << "[ResourceLoader] " << error.what() << std::endl;
-		std::cerr << "[ResourceLoader] Please ensure all texture files exist in the Media/Textures/ directory" << std::endl;
-		std::cerr << "[ResourceLoader] Current working directory: " << std::filesystem::current_path() << std::endl;
-		throw;
-	}
-	catch (const std::exception& error)
-	{
-		std::cerr << "[ResourceLoader] UNEXPECTED ERROR during texture loading:" << std::endl;
-		std::cerr << "[ResourceLoader] " << error.what() << std::endl;
-		throw;
-	}
+	m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
+	m_textures.Load(TextureID::kExplosion, "Media/Textures/Explosion.png");
+	
+	m_textures.Load(TextureID::kBackground, "Media/Textures/Background.png");
+	m_textures.Load(TextureID::kParticle, "Media/Textures/Particle.png");
 }
 
 void World::BuildScene()
@@ -138,13 +113,13 @@ void World::BuildScene()
 
 	//Add the background sprite to the world
 	std::unique_ptr<SpriteNode> background_sprite(new SpriteNode(texture, textureRect));
-	background_sprite->setPosition(sf::Vector2f(m_world_bounds.position.x, m_world_bounds.position.y));
+	background_sprite->setPosition(sf::Vector2f(0.f, 0.f));
+	m_background_sprite = background_sprite.get();
 	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(background_sprite));
 
 	std::unique_ptr<Aircraft> leader(new Aircraft(AircraftType::kEagle, m_textures, m_fonts));
 	m_player_aircraft = leader.get();
 	m_player_aircraft->setPosition(m_spawn_position);
-	m_player_aircraft->SetVelocity(40.f, m_scroll_speed);
 	m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(leader));
 
 	//Add the particle nodes to the scene

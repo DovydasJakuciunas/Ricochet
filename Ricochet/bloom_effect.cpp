@@ -2,7 +2,7 @@
 #include "shader_types.hpp"
 
 BloomEffect::BloomEffect()
-	: m_intensity(1.0f)
+	: m_intensity(.4f)
 {
 	m_shaders.Load(ShaderTypes::kBrightnessPass, "Media/Shaders/Fullpass.vert", "Media/Shaders/Brightness.frag");
 	m_shaders.Load(ShaderTypes::kDownSamplePass, "Media/Shaders/Fullpass.vert", "Media/Shaders/DownSample.frag");

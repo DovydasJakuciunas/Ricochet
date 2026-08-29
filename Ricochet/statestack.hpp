@@ -22,6 +22,8 @@ public:
 	void ClearStack();
 	bool IsEmpty() const;
 
+	void SetWorld(class World* world);
+
 private:
 	State::Ptr CreateState(StateID state_id);
 	void ApplyPendingChanges();
@@ -42,12 +44,27 @@ private:
 	std::map<StateID, std::function<State::Ptr()>> m_state_factory;
 };
 
+// Helper template to detect if type has Initialize method
+template<typename T, typename = void>
+struct has_initialize : std::false_type {};
+
+template<typename T>
+struct has_initialize<T, std::void_t<decltype(std::declval<T>().Initialize())>> : std::true_type {};
+
 template<typename T>
 void StateStack::RegisterState(StateID state_id)
 {
 	m_state_factory[state_id] = [this]()
+	{
+		auto state = std::make_shared<T>(*this, m_context);
+
+		// Call Initialize if T supports it (for enable_shared_from_this)
+		if constexpr (has_initialize<T>::value)
 		{
-			return State::Ptr(new T(*this, m_context));
-		};
+			state->Initialize();
+		}
+
+		return state;
+	};
 }
 

@@ -7,6 +7,8 @@
 #include "command_queue.hpp"
 #include "bloom_effect.hpp"
 #include "sound_player.hpp"
+#include "sprite_node.hpp"
+#include "utility.hpp"
 
 class World
 {
@@ -19,6 +21,8 @@ public:
 
 	bool HasAlivePlayer() const;
 	bool HasPlayerReachedEnd() const;
+
+	void SetBloomIntensity(float intensity);
 
 private:
 	void LoadTextures();
@@ -60,7 +64,6 @@ private:
 	std::array<SceneNode*, static_cast<int>(SceneLayers::kLayerCount)> m_scene_layers;
 	sf::FloatRect m_world_bounds;
 	sf::Vector2f m_spawn_position;
-	float m_scroll_speed;
 	Aircraft* m_player_aircraft;
 
 	CommandQueue m_command_queue;
@@ -69,5 +72,6 @@ private:
 	std::vector<Aircraft*> m_active_enemies;
 
 	BloomEffect m_bloom_effect;
+	SpriteNode* m_background_sprite;
 };
 

@@ -13,11 +13,11 @@ class StateStack;
 class State
 {
 public:
-	typedef std::unique_ptr<State> Ptr;
+	typedef std::shared_ptr<State> Ptr;
 
 	struct Context
 	{
-		Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player, MusicPlayer& music, SoundPlayer& sound);
+		Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player, MusicPlayer& music, SoundPlayer& sound, class World* world = nullptr);
 		//TODO unique_ptr rather than raw pointers here?
 		sf::RenderWindow* window;
 		TextureHolder* textures;
@@ -25,6 +25,7 @@ public:
 		Player* player;
 		MusicPlayer* music;
 		SoundPlayer* sound;
+		World* world;
 	};
 
 public:
@@ -40,6 +41,7 @@ protected:
 	void RequestStackClear();
 
 	Context GetContext() const;
+	StateStack* GetStack() const;
 
 private:
 	StateStack* m_stack;

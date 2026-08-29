@@ -9,7 +9,7 @@ State::~State()
 {
 }
 
-State::Context::Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player, MusicPlayer& music, SoundPlayer& sound) : window(&window), textures(&textures), fonts(&fonts), player(&player), music(&music), sound(&sound)
+State::Context::Context(sf::RenderWindow& window, TextureHolder& textures, FontHolder& fonts, Player& player, MusicPlayer& music, SoundPlayer& sound, class World* world) : window(&window), textures(&textures), fonts(&fonts), player(&player), music(&music), sound(&sound), world(world)
 {
 }
 
@@ -31,4 +31,9 @@ void State::RequestStackClear()
 State::Context State::GetContext() const
 {
 	return m_context;
+}
+
+StateStack* State::GetStack() const
+{
+	return m_stack;
 }

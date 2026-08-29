@@ -82,6 +82,11 @@ bool StateStack::IsEmpty() const
 	return m_stack.empty();
 }
 
+void StateStack::SetWorld(class World* world)
+{
+	m_context.world = world;
+}
+
 State::Ptr StateStack::CreateState(StateID state_id)
 {
 	auto found = m_state_factory.find(state_id);

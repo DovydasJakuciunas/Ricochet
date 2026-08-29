@@ -4,8 +4,9 @@
 #include "container.hpp"
 #include "button.hpp"
 #include "label.hpp"
+#include "world.hpp"
 
-class SettingsState : public State
+class SettingsState : public State, public std::enable_shared_from_this<SettingsState>
 {
 public:
 	SettingsState(StateStack& stack, Context context);
@@ -22,5 +23,6 @@ private:
 	gui::Container m_gui_container;
 	std::array<gui::Button::Ptr, static_cast<int>(Action::kActionCount)> m_binding_buttons;
 	std::array<gui::Label::Ptr, static_cast<int>(Action::kActionCount)> m_binding_labels;
-};
 
+	gui::Button::Ptr m_back_button;
+};

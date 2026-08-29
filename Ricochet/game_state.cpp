@@ -1,9 +1,11 @@
 #include "game_state.hpp"
 #include "mission_status.hpp"
+#include "statestack.hpp"
 
 GameState::GameState(StateStack& stack, Context context) : State(stack, context), m_world(*context.window, *context.fonts, *context.sound), m_player(*context.player)
 {
 	context.music->Play(MusicThemes::kMissionTheme);
+	GetStack()->SetWorld(&m_world);
 }
 
 void GameState::Draw()
