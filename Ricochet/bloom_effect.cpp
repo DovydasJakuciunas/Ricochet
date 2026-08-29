@@ -2,6 +2,7 @@
 #include "shader_types.hpp"
 
 BloomEffect::BloomEffect()
+	: m_intensity(1.0f)
 {
 	m_shaders.Load(ShaderTypes::kBrightnessPass, "Media/Shaders/Fullpass.vert", "Media/Shaders/Brightness.frag");
 	m_shaders.Load(ShaderTypes::kDownSamplePass, "Media/Shaders/Fullpass.vert", "Media/Shaders/DownSample.frag");
@@ -91,5 +92,6 @@ void BloomEffect::Add(const sf::RenderTexture& source, const sf::RenderTexture& 
 
 	adder.setUniform("source", source.getTexture());
 	adder.setUniform("bloom", bloom.getTexture());
+	adder.setUniform("intensity", m_intensity);
 	ApplyShader(adder, output);
 }

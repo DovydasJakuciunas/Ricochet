@@ -4,6 +4,7 @@
 #include <string>
 #include <SFML/Graphics/Font.hpp>
 #include <iostream>
+#include <sstream>
 
 template<typename Identifier, typename Resource>
 void ResourceHolder<Identifier, Resource>::Load(const Identifier id, const std::string& filename)
@@ -20,10 +21,19 @@ void ResourceHolder<Identifier, Resource>::Load(const Identifier id, const std::
     }
     if (!loaded)
     {
-        throw std::runtime_error("ResourceHolder::Load failed to load " + filename);
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Load failed to load file: " << filename 
+                  << " (ResourceID: " << static_cast<int>(id) << ")";
+        throw std::runtime_error(error_msg.str());
     }
     auto inserted = m_resource_map.insert(std::make_pair(id, std::move(resource)));
-    assert(inserted.second);
+    if (!inserted.second)
+    {
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Load failed: duplicate resource ID detected (ID: " 
+                  << static_cast<int>(id) << "). Resource was already loaded.";
+        throw std::runtime_error(error_msg.str());
+    }
 }
 
 template<typename Identifier, typename Resource>
@@ -33,17 +43,34 @@ void ResourceHolder<Identifier, Resource>::Load(const Identifier id, const std::
     std::unique_ptr<Resource> resource(new Resource());
     if (!resource->loadFromFile(filename, second_param))
     {
-        throw std::runtime_error("ResourceHolder::Load failed to load " + filename);
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Load failed to load file: " << filename 
+                  << " with additional parameter (ResourceID: " << static_cast<int>(id) << ")";
+        throw std::runtime_error(error_msg.str());
     }
     auto inserted = m_resource_map.insert(std::make_pair(id, std::move(resource)));
-    assert(inserted.second);
+    if (!inserted.second)
+    {
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Load failed: duplicate resource ID detected (ID: " 
+                  << static_cast<int>(id) << "). Resource was already loaded.";
+        throw std::runtime_error(error_msg.str());
+    }
 }
 
 template<typename Identifier, typename Resource>
 const Resource& ResourceHolder<Identifier, Resource>::Get(Identifier id) const
 {
     auto found = m_resource_map.find(id);
-    assert(found != m_resource_map.end());
+    if (found == m_resource_map.end())
+    {
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Get failed: Resource not found (ResourceID: " 
+                  << static_cast<int>(id) << "). Total resources in map: " 
+                  << m_resource_map.size();
+        std::cerr << "[ResourceHolder] " << error_msg.str() << std::endl;
+        throw std::runtime_error(error_msg.str());
+    }
     return *found->second;
 }
 
@@ -52,6 +79,14 @@ template<typename Identifier, typename Resource>
 Resource& ResourceHolder<Identifier, Resource>::Get(Identifier id)
 {
     auto found = m_resource_map.find(id);
-    assert(found != m_resource_map.end());
+    if (found == m_resource_map.end())
+    {
+        std::ostringstream error_msg;
+        error_msg << "ResourceHolder::Get failed: Resource not found (ResourceID: " 
+                  << static_cast<int>(id) << "). Total resources in map: " 
+                  << m_resource_map.size();
+        std::cerr << "[ResourceHolder] " << error_msg.str() << std::endl;
+        throw std::runtime_error(error_msg.str());
+    }
     return *found->second;
 }

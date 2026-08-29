@@ -14,11 +14,10 @@ enum class TextureID
 	kMissileRefill,
 	kFireSpread,
 	kFireRate,
-	kFinishLine,
 	kEntities,
 	kButtons,
 	kExplosion,
-	kJungle,
+	kBackground,
 	kParticle,
 	kNumTextures,
 };

@@ -16,12 +16,13 @@ public:
 
 	virtual void Apply(const sf::RenderTexture& input, sf::RenderTarget& output);
 
+	// Control bloom intensity (0.0 = no bloom, 1.0 = full bloom)
+	void SetIntensity(float intensity) { m_intensity = intensity; }
+	float GetIntensity() const { return m_intensity; }
 
 private:
 	typedef std::array<sf::RenderTexture, 2> RenderTextureArray;
 
-
-private:
 	void PrepareTextures(sf::Vector2u size);
 
 	void FilterBright(const sf::RenderTexture& input, sf::RenderTexture& output);
@@ -30,12 +31,11 @@ private:
 	void Downsample(const sf::RenderTexture& input, sf::RenderTexture& output);
 	void Add(const sf::RenderTexture& source, const sf::RenderTexture& bloom, sf::RenderTarget& target);
 
-
-private:
 	ShaderHolder		m_shaders;
 
 	sf::RenderTexture	m_brightness_texture;
 	RenderTextureArray	m_firstpass_textures;
 	RenderTextureArray	m_secondpass_textures;
-};
 
+	float m_intensity;
+};

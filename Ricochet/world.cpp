@@ -1,6 +1,7 @@
 #include "world.hpp"
 #include "sprite_node.hpp"
 #include <iostream>
+#include <filesystem>
 #include "state.hpp"
 #include <SFML/System/Angle.hpp>
 #include "Projectile.hpp"
@@ -31,7 +32,7 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 void World::Update(sf::Time dt)
 {
 	//Scroll the world
-	m_camera.move(sf::Vector2f(0, m_scroll_speed * dt.asSeconds()));
+	
 
 	m_player_aircraft->SetVelocity(0.f, 0.f);
 
@@ -50,8 +51,6 @@ void World::Update(sf::Time dt)
 	HandleCollisions();
 	m_scene_graph.RemoveWrecks();
 
-	SpawnEnemies();
-
 	m_scene_graph.Update(dt, m_command_queue);
 	AdaptPlayerPosition();
 }
@@ -66,6 +65,9 @@ void World::Draw()
 		m_scene_texture.setView(m_camera);
 		m_scene_texture.draw(m_scene_graph);
 		m_scene_texture.display();
+
+		// Reduce bloom intensity to make it less obvious on the background
+		m_bloom_effect.SetIntensity(0.6f);
 		m_bloom_effect.Apply(m_scene_texture, m_target);
 	}
 	else
@@ -94,11 +96,28 @@ bool World::HasPlayerReachedEnd() const
 
 void World::LoadTextures()
 {
-	m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
-	m_textures.Load(TextureID::kExplosion, "Media/Textures/Explosion.png");
-	m_textures.Load(TextureID::kFinishLine, "Media/Textures/FinishLine.png");
-	m_textures.Load(TextureID::kJungle, "Media/Textures/Jungle.png");
-	m_textures.Load(TextureID::kParticle, "Media/Textures/Particle.png");
+	try
+	{
+
+		m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
+		m_textures.Load(TextureID::kExplosion, "Media/Textures/Explosion.png");
+		m_textures.Load(TextureID::kBackground, "Media/Textures/Background.png");
+		m_textures.Load(TextureID::kParticle, "Media/Textures/Particle.png");
+	}
+	catch (const std::runtime_error& error)
+	{
+		std::cerr << "[ResourceLoader] CRITICAL ERROR during texture loading:" << std::endl;
+		std::cerr << "[ResourceLoader] " << error.what() << std::endl;
+		std::cerr << "[ResourceLoader] Please ensure all texture files exist in the Media/Textures/ directory" << std::endl;
+		std::cerr << "[ResourceLoader] Current working directory: " << std::filesystem::current_path() << std::endl;
+		throw;
+	}
+	catch (const std::exception& error)
+	{
+		std::cerr << "[ResourceLoader] UNEXPECTED ERROR during texture loading:" << std::endl;
+		std::cerr << "[ResourceLoader] " << error.what() << std::endl;
+		throw;
+	}
 }
 
 void World::BuildScene()
@@ -113,7 +132,7 @@ void World::BuildScene()
 	}
 
 	//Prepare the background
-	sf::Texture& texture = m_textures.Get(TextureID::kJungle);
+	sf::Texture& texture = m_textures.Get(TextureID::kBackground);
 	sf::IntRect textureRect(m_world_bounds);
 	texture.setRepeated(true);
 
@@ -122,14 +141,6 @@ void World::BuildScene()
 	background_sprite->setPosition(sf::Vector2f(m_world_bounds.position.x, m_world_bounds.position.y));
 	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(background_sprite));
 
-	//Add the finish line
-	sf::Texture& finish_texture = m_textures.Get(TextureID::kFinishLine);
-	std::unique_ptr<SpriteNode> finish_sprite(new SpriteNode(finish_texture));
-	finish_sprite->setPosition(sf::Vector2f(0.f, -76.f));
-	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(finish_sprite));
-
-	//Homework add the player's aircraft
-	//Add two Raptor escort planes that are 50 units behind the plane and 80 units either side of the player's plane
 	std::unique_ptr<Aircraft> leader(new Aircraft(AircraftType::kEagle, m_textures, m_fonts));
 	m_player_aircraft = leader.get();
 	m_player_aircraft->setPosition(m_spawn_position);
@@ -142,16 +153,6 @@ void World::BuildScene()
 
 	std::unique_ptr<ParticleNode> propellantNode(new ParticleNode(ParticleType::kPropellant, m_textures));
 	m_scene_layers[static_cast<int>(SceneLayers::kLowerAir)]->AttachChild(std::move(propellantNode));
-
-	/*std::unique_ptr<Aircraft> left_escort(new Aircraft(AircraftType::kRaptor, m_textures, m_fonts));
-	left_escort->setPosition(sf::Vector2f(- 80.f, 50.f));
-	m_player_aircraft->AttachChild(std::move(left_escort));
-
-	std::unique_ptr<Aircraft> right_escort(new Aircraft(AircraftType::kRaptor, m_textures, m_fonts));
-	right_escort->setPosition(sf::Vector2f(80.f, 50.f));
-	m_player_aircraft->AttachChild(std::move(right_escort));*/
-
-	AddEnemies();
 
 	//Add sound effect node
 	std::unique_ptr<SoundNode> soundNode(new SoundNode(m_sounds));
@@ -167,8 +168,7 @@ void World::AdaptPlayerVelocity()
 	{
 		m_player_aircraft->SetVelocity(velocity / std::sqrt(2.f));
 	}
-	//Add scrolling velocity
-	m_player_aircraft->Accelerate(0.f, m_scroll_speed);
+	
 }
 
 void World::AdaptPlayerPosition()
@@ -184,43 +184,6 @@ void World::AdaptPlayerPosition()
 	position.y = std::max(position.y, view_bounds.position.y + border_distance);
 	m_player_aircraft->setPosition(position);
 
-}
-
-void World::SpawnEnemies()
-{
-	//Spawn an enemy when it is relevent i.e in BattlefieldBounds
-	while (!m_enemy_spawn_points.empty() && m_enemy_spawn_points.back().m_y > GetBattleFieldBounds().position.y)
-	{
-		SpawnPoint spawn = m_enemy_spawn_points.back();
-		std::unique_ptr<Aircraft> enemy(new Aircraft(spawn.m_type, m_textures, m_fonts));
-		enemy->setPosition(sf::Vector2f(spawn.m_x, spawn.m_y));
-		enemy->setRotation(sf::degrees(180.f));
-		m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(enemy));
-		m_enemy_spawn_points.pop_back();
-	}
-}
-
-void World::AddEnemies()
-{
-	AddEnemy(AircraftType::kRaptor, 0.f, 500.f);
-	AddEnemy(AircraftType::kRaptor, 0.f, 1000.f);
-	AddEnemy(AircraftType::kRaptor, 100.f, 1100.f);
-	AddEnemy(AircraftType::kRaptor, -100.f, 1100.f);
-	AddEnemy(AircraftType::kRaptor, -70.f, 1400.f);
-	AddEnemy(AircraftType::kRaptor, 70.f, 1400.f);
-	AddEnemy(AircraftType::kRaptor, 70.f, 1600.f);
-
-	//Sort the enemies according to y-value
-	std::sort(m_enemy_spawn_points.begin(), m_enemy_spawn_points.end(), [](SpawnPoint lhs, SpawnPoint rhs)
-		{
-			return lhs.m_y < rhs.m_y;
-		});
-}
-
-void World::AddEnemy(AircraftType type, float relx, float rely)
-{
-	SpawnPoint spawn(type, m_spawn_position.x + relx, m_spawn_position.y - rely);
-	m_enemy_spawn_points.emplace_back(spawn);
 }
 
 sf::FloatRect World::GetViewBounds() const
