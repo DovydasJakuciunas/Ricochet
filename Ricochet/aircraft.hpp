@@ -6,6 +6,8 @@
 #include "projectile_type.hpp"
 #include "command_queue.hpp"
 #include "animation.hpp"
+#include <cmath>
+#include "utility.hpp"
 
 class Aircraft : public Entity
 {
@@ -19,7 +21,6 @@ public:
 
 	void UpdateTexts();
 
-
 	float GetMaxSpeed() const;
 	void Fire();
 	void LaunchMissile();
@@ -29,6 +30,20 @@ public:
 	sf::FloatRect GetBoundingRect() const override;
 	bool IsMarkedForRemoval() const override;
 	void PlayLocalSound(CommandQueue& commands, SoundEffect effect);
+
+	void IncrementForwardTime(sf::Time dt);
+	void ResetForwardTime();
+	sf::Time GetForwardAccelerationTime() const;
+	void IncrementReleaseTime(sf::Time dt);
+	void ResetReleaseTime();
+	sf::Time GetReleaseTime() const;
+	void StoreVelocityAtRelease();
+	sf::Vector2f GetVelocityAtRelease() const;
+	void InvertVelocityX();
+	void InvertVelocityY();
+	void InvertRotation();
+	void AlignVelocityToRotation();
+	void AlignRotationToDirection();
 
 private:
 	virtual void DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -69,6 +84,10 @@ private:
 	bool m_is_marked_for_removal;
 	bool m_show_explosion;
 	bool m_explosion_began;
+
+	sf::Time m_forward_acceleration_time;
+	sf::Time m_release_time;
+	sf::Vector2f m_velocity_at_release;
 
 };
 

@@ -12,7 +12,7 @@ std::vector<AircraftData> InitializeAircraftData()
 	std::vector<AircraftData> data(static_cast<int>(AircraftType::kAircraftCount));
 
 	data[static_cast<int>(AircraftType::kEagle)].m_hitpoints = 100;
-	data[static_cast<int>(AircraftType::kEagle)].m_speed = 200.f;
+	data[static_cast<int>(AircraftType::kEagle)].m_speed = 300.f;
 	data[static_cast<int>(AircraftType::kEagle)].m_fire_interval = sf::seconds(1);
 	data[static_cast<int>(AircraftType::kEagle)].m_texture = TextureID::kEntities;
 	data[static_cast<int>(AircraftType::kEagle)].m_texture_rect = sf::IntRect({ 0, 0 }, { 48, 64 });

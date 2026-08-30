@@ -29,5 +29,6 @@ private:
 	std::map<sf::Keyboard::Scancode, Action> m_key_binding;
 	std::map<Action, Command> m_action_binding;
 	MissionStatus m_current_mission_status;
+	bool m_was_forward_pressed;
 };
 

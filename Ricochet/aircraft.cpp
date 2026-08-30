@@ -1,13 +1,11 @@
 #include "aircraft.hpp"
 #include "texture_id.hpp"
 #include "data_tables.hpp"
-#include "utility.hpp"
 #include "constants.hpp"
 #include "pickup_type.hpp"
 #include "projectile.hpp"
 #include "pickup.hpp"
 #include "projectile_type.hpp"
-#include <iostream>
 #include "sound_node.hpp"
 
 
@@ -49,6 +47,9 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	, m_show_explosion(true)
 	, m_explosion(textures.Get(TextureID::kExplosion))
 	, m_explosion_began(false)
+	, m_forward_acceleration_time(sf::Time::Zero)
+	, m_release_time(sf::Time::Zero)
+	, m_velocity_at_release(0.f, 0.f)
 {
 	m_explosion.SetFrameSize(sf::Vector2i(256, 256));
 	m_explosion.SetNumFrames(16);
@@ -261,6 +262,7 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 		m_is_marked_for_removal = true;
 		return;
 	}
+
 	Entity::UpdateCurrent(dt, commands);
 	UpdateTexts();
 
@@ -342,4 +344,112 @@ void Aircraft::UpdateRollAnimation()
 		m_sprite.setTextureRect(textureRect);
 
 	}
+}
+
+void Aircraft::IncrementForwardTime(sf::Time dt)
+{
+	m_forward_acceleration_time += dt;
+}
+
+void Aircraft::ResetForwardTime()
+{
+	m_forward_acceleration_time = sf::Time::Zero;
+}
+
+sf::Time Aircraft::GetForwardAccelerationTime() const
+{
+	return m_forward_acceleration_time;
+}
+
+void Aircraft::IncrementReleaseTime(sf::Time dt)
+{
+	m_release_time += dt;
+}
+
+void Aircraft::ResetReleaseTime()
+{
+	m_release_time = sf::Time::Zero;
+}
+
+sf::Time Aircraft::GetReleaseTime() const
+{
+	return m_release_time;
+}
+
+void Aircraft::StoreVelocityAtRelease()
+{
+	m_velocity_at_release = GetVelocity();
+}
+
+sf::Vector2f Aircraft::GetVelocityAtRelease() const
+{
+	return m_velocity_at_release;
+}
+
+void Aircraft::InvertVelocityX()
+{
+	sf::Vector2f velocity = GetVelocity();
+	SetVelocity(-velocity.x, velocity.y);
+}
+
+void Aircraft::InvertVelocityY()
+{
+	sf::Vector2f velocity = GetVelocity();
+	SetVelocity(velocity.x, -velocity.y);
+}
+
+void Aircraft::InvertRotation()
+{
+	// Get current rotation and invert it by adding 180 degrees
+	float currentRotation = getRotation().asDegrees();
+	float invertedRotation = currentRotation + 180.f;
+
+	// Normalize to 0-360 range
+	if (invertedRotation >= 360.f)
+	{
+		invertedRotation -= 360.f;
+	}
+
+	setRotation(sf::degrees(invertedRotation));
+}
+
+void Aircraft::AlignVelocityToRotation()
+{
+	// Get current velocity magnitude (speed)
+	sf::Vector2f currentVelocity = GetVelocity();
+	float speed = std::sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y);
+
+	if (speed < 0.1f)
+	{
+		return; // No significant velocity
+	}
+
+	// Get rotation angle and convert to radians
+	float rotationDegrees = getRotation().asDegrees();
+	double radians = Utility::toRadians(rotationDegrees + 90.f);
+
+	// Calculate direction vectors based on rotation
+	// Aircraft forward is at 90 degrees in SFML coordinate system
+	float dirX = -std::cos(radians);
+	float dirY = -std::sin(radians);
+
+	// Apply new velocity in the direction the aircraft is facing, maintaining speed
+	SetVelocity(dirX * speed, dirY * speed);
+}
+
+void Aircraft::AlignRotationToDirection()
+{
+	sf::Vector2f velocity = GetVelocity();
+	if (velocity.x == 0.f && velocity.y == 0.f)
+	{
+		return; // No velocity, can't align
+	}
+
+	// Calculate angle from velocity vector
+	// atan2(y, x) gives angle in radians
+	float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159265f;
+	// Aircraft forward is at 90 degrees in SFML, so adjust
+	angle = angle - 90.f;
+
+	setRotation(sf::degrees(angle));
 }

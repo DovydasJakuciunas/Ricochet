@@ -24,8 +24,8 @@ public:
 private:
 	void LoadTextures();
 	void BuildScene();
-	void AdaptPlayerVelocity();
 	void AdaptPlayerPosition();
+	void HandlePlayerBoundaryCollision();
 
 	sf::FloatRect GetViewBounds() const;
 	sf::FloatRect GetBattleFieldBounds() const;
