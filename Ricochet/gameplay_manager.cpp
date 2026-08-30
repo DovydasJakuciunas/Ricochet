@@ -22,7 +22,7 @@ int GameplayManager::GetPlayer2Kills() const
 {
 	return m_player2_kills;
 }
-f
+
 void GameplayManager::IncrementPlayer1Kills()
 {
 	m_player1_kills++;
