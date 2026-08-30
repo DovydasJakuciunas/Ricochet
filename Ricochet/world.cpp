@@ -35,7 +35,7 @@ void World::Update(sf::Time dt)
 
 	GuideMissiles();
 
-	UpdateSounds();
+	//UpdateSounds();
 
 	//Process commands from the scenegraph
 	while (!m_command_queue.IsEmpty())

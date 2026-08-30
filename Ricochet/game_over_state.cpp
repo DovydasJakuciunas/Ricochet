@@ -41,11 +41,11 @@ bool GameOverState::Update(sf::Time dt)
 {
     //Show gameover for 3 seconds and then return to the main menu
     m_elapsed_time += dt;
-    if (m_elapsed_time > sf::seconds(kGameOverToMenuPause))
-    {
-        RequestStackClear();
-        RequestStackPush(StateID::kMenu);
-    }
+    //if (m_elapsed_time > sf::seconds(kGameOverToMenuPause))
+    //{
+    //    RequestStackClear();
+    //    RequestStackPush(StateID::kMenu);
+    //}
     return false;
 }
 
