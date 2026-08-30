@@ -83,21 +83,6 @@ unsigned int Aircraft::GetCategory() const
 	return static_cast<unsigned int>(ReceiverCategories::kPlayer2Aircraft);
 }
 
-void Aircraft::IncreaseFireRate()
-{
-	m_weapon_system->IncreaseFireRate();
-}
-
-void Aircraft::IncreaseFireSpread()
-{
-	m_weapon_system->IncreaseFireSpread();
-}
-
-void Aircraft::CollectMissile(unsigned int count)
-{
-	m_weapon_system->CollectMissile(count);
-}
-
 void Aircraft::UpdateTexts()
 {
 	m_health_display->SetString(std::to_string(GetHitPoints()) + "HP");
@@ -124,31 +109,6 @@ float Aircraft::GetMaxSpeed() const
 	return Table[static_cast<int>(m_type)].m_speed;
 }
 
-void Aircraft::Fire()
-{
-	m_weapon_system->Fire();
-}
-
-void Aircraft::LaunchMissile()
-{
-	m_weapon_system->LaunchMissile();
-}
-
-void Aircraft::CreateBullet(SceneNode& node, const TextureHolder& textures)
-{
-	m_weapon_system->CreateBullet(node, textures);
-}
-
-void Aircraft::CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures)
-{
-	m_weapon_system->CreateProjectile(node, type, x_offset, y_offset, textures);
-}
-
-sf::Vector2f Aircraft::GetBulletSpawnPosition(float x_offset) const
-{
-	return m_weapon_system->GetBulletSpawnPosition(x_offset);
-}
-
 sf::FloatRect Aircraft::GetBoundingRect() const
 {
 	return GetWorldTransform().transformRect(m_sprite.getGlobalBounds());
@@ -157,11 +117,6 @@ sf::FloatRect Aircraft::GetBoundingRect() const
 bool Aircraft::IsMarkedForRemoval() const
 {
 	return IsDestroyed() && (m_explosion.IsFinished() || !m_show_explosion);
-}
-
-void Aircraft::PlayLocalSound(CommandQueue& commands, SoundEffect effect)
-{
-	m_weapon_system->PlayLocalSound(commands, effect);
 }
 
 void Aircraft::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
@@ -204,7 +159,7 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 		if (!m_explosion_began)
 		{
 			SoundEffect soundEffect = (Utility::RandomInt(2) == 0) ? SoundEffect::kExplosion1 : SoundEffect::kExplosion2;
-			PlayLocalSound(commands, soundEffect);
+			m_weapon_system->PlayLocalSound(commands, soundEffect);
 			m_explosion_began = true;
 		}
 		m_is_marked_for_removal = true;
@@ -273,71 +228,6 @@ void Aircraft::UpdateRollAnimation()
 	}
 }
 
-void Aircraft::IncrementForwardTime(sf::Time dt)
-{
-	m_movement_controller->IncrementForwardTime(dt);
-}
-
-void Aircraft::ResetForwardTime()
-{
-	m_movement_controller->ResetForwardTime();
-}
-
-sf::Time Aircraft::GetForwardAccelerationTime() const
-{
-	return m_movement_controller->GetForwardAccelerationTime();
-}
-
-void Aircraft::IncrementReleaseTime(sf::Time dt)
-{
-	m_movement_controller->IncrementReleaseTime(dt);
-}
-
-void Aircraft::ResetReleaseTime()
-{
-	m_movement_controller->ResetReleaseTime();
-}
-
-sf::Time Aircraft::GetReleaseTime() const
-{
-	return m_movement_controller->GetReleaseTime();
-}
-
-void Aircraft::StoreVelocityAtRelease()
-{
-	m_movement_controller->StoreVelocityAtRelease();
-}
-
-sf::Vector2f Aircraft::GetVelocityAtRelease() const
-{
-	return m_movement_controller->GetVelocityAtRelease();
-}
-
-void Aircraft::InvertVelocityX()
-{
-	m_movement_controller->InvertVelocityX();
-}
-
-void Aircraft::InvertVelocityY()
-{
-	m_movement_controller->InvertVelocityY();
-}
-
-void Aircraft::InvertRotation()
-{
-	m_movement_controller->InvertRotation();
-}
-
-void Aircraft::AlignVelocityToRotation()
-{
-	m_movement_controller->AlignVelocityToRotation();
-}
-
-void Aircraft::AlignRotationToDirection()
-{
-	m_movement_controller->AlignRotationToDirection();
-}
-
 PlayerID Aircraft::GetPlayerID() const
 {
 	return m_player_id;
@@ -375,4 +265,24 @@ void Aircraft::Respawn()
 	m_explosion_began = false;
 	// Reset explosion animation
 	m_explosion.Restart();
+}
+
+WeaponSystem& Aircraft::GetWeaponSystem()
+{
+	return *m_weapon_system;
+}
+
+const WeaponSystem& Aircraft::GetWeaponSystem() const
+{
+	return *m_weapon_system;
+}
+
+MovementController& Aircraft::GetMovementController()
+{
+	return *m_movement_controller;
+}
+
+const MovementController& Aircraft::GetMovementController() const
+{
+	return *m_movement_controller;
 }

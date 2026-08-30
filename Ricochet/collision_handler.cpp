@@ -6,6 +6,7 @@
 #include "command_queue.hpp"
 #include "sound_player.hpp"
 #include "sound_effect.hpp"
+#include "weapon_system.hpp"
 #include <cmath>
 
 CollisionHandler::CollisionHandler(Aircraft* player1, Aircraft* player2, SceneNode& scene_graph,
@@ -122,7 +123,7 @@ void CollisionHandler::HandleCollisions()
 			//Collision response
 			pickup.Apply(aircraft);
 			pickup.Destroy();
-			aircraft.PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
+			aircraft.GetWeaponSystem().PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
 		}
 		// Pickup collection - Player 2
 		else if (MatchesCategories(pair, ReceiverCategories::kPlayer2Aircraft, ReceiverCategories::kPickup))
@@ -132,7 +133,7 @@ void CollisionHandler::HandleCollisions()
 			//Collision response
 			pickup.Apply(aircraft);
 			pickup.Destroy();
-			aircraft.PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
+			aircraft.GetWeaponSystem().PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
 		}
 		// Player 1 hit by any projectile (check owner for PvP)
 		else if (MatchesCategories(pair, ReceiverCategories::kPlayer1Aircraft, ReceiverCategories::kAlliedProjectile))

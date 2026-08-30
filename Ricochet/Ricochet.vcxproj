@@ -163,6 +163,7 @@
     <ClInclude Include="emitter_node.hpp" />
     <ClInclude Include="entity.hpp" />
     <ClInclude Include="fontID.hpp" />
+    <ClInclude Include="gameplay_coordinator.hpp" />
     <ClInclude Include="gameplay_manager.hpp" />
     <ClInclude Include="game_over_state.hpp" />
     <ClInclude Include="game_state.hpp" />
@@ -218,6 +219,7 @@
     <ClCompile Include="component.cpp" />
     <ClCompile Include="container.cpp" />
     <ClCompile Include="data_tables.cpp" />
+    <ClCompile Include="gameplay_coordinator.cpp" />
     <ClCompile Include="gameplay_manager.cpp" />
     <ClCompile Include="emitter_node.cpp" />
     <ClCompile Include="entity.cpp" />

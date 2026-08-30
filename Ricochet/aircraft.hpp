@@ -20,39 +20,11 @@ public:
 	~Aircraft();
 	unsigned int GetCategory() const override;
 
-	// Weapon system delegation
-	void IncreaseFireRate();
-	void IncreaseFireSpread();
-	void CollectMissile(unsigned int count);
-	void Fire();
-	void LaunchMissile();
-
 	void UpdateTexts();
 
 	float GetMaxSpeed() const;
 	sf::FloatRect GetBoundingRect() const override;
 	bool IsMarkedForRemoval() const override;
-	void PlayLocalSound(CommandQueue& commands, SoundEffect effect);
-
-	// Projectile methods (delegated to WeaponSystem)
-	void CreateBullet(SceneNode& node, const TextureHolder& textures);
-	void CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures);
-	sf::Vector2f GetBulletSpawnPosition(float x_offset) const;
-
-	// Movement controller delegation
-	void IncrementForwardTime(sf::Time dt);
-	void ResetForwardTime();
-	sf::Time GetForwardAccelerationTime() const;
-	void IncrementReleaseTime(sf::Time dt);
-	void ResetReleaseTime();
-	sf::Time GetReleaseTime() const;
-	void StoreVelocityAtRelease();
-	sf::Vector2f GetVelocityAtRelease() const;
-	void InvertVelocityX();
-	void InvertVelocityY();
-	void InvertRotation();
-	void AlignVelocityToRotation();
-	void AlignRotationToDirection();
 
 	// Player ID accessors
 	PlayerID GetPlayerID() const;
@@ -68,9 +40,11 @@ public:
 	// Respawn method
 	void Respawn();
 
-	// For subsystem access
-	friend class WeaponSystem;
-	friend class MovementController;
+	// Subsystem access
+	WeaponSystem& GetWeaponSystem();
+	const WeaponSystem& GetWeaponSystem() const;
+	MovementController& GetMovementController();
+	const MovementController& GetMovementController() const;
 
 private:
 	virtual void DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const;

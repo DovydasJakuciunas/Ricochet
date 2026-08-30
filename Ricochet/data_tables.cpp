@@ -3,6 +3,7 @@
 #include "projectile_type.hpp"
 #include "pickup_type.hpp"
 #include "aircraft.hpp"
+#include "weapon_system.hpp"
 #include "constants.hpp"
 #include "SFML/Graphics/Rect.hpp"
 #include "particletype.hpp"
@@ -55,15 +56,24 @@ std::vector<PickupData> InitializePickupData()
 
 	data[static_cast<int>(PickupType::kMissileRefill)].m_texture = TextureID::kEntities;
 	data[static_cast<int>(PickupType::kMissileRefill)].m_texture_rect = sf::IntRect({ 40, 64 }, { 40, 40 });
-	data[static_cast<int>(PickupType::kMissileRefill)].m_action = std::bind(&Aircraft::CollectMissile, std::placeholders::_1, kMissileRefill);
+	data[static_cast<int>(PickupType::kMissileRefill)].m_action = [](Aircraft& a)
+		{
+			a.GetWeaponSystem().CollectMissile(kMissileRefill);
+		};
 
 	data[static_cast<int>(PickupType::kFireSpread)].m_texture = TextureID::kEntities;
 	data[static_cast<int>(PickupType::kFireSpread)].m_texture_rect = sf::IntRect({ 80, 64 }, { 40, 40 });
-	data[static_cast<int>(PickupType::kFireSpread)].m_action = std::bind(&Aircraft::IncreaseFireSpread, std::placeholders::_1);
+	data[static_cast<int>(PickupType::kFireSpread)].m_action = [](Aircraft& a)
+		{
+			a.GetWeaponSystem().IncreaseFireSpread();
+		};
 
 	data[static_cast<int>(PickupType::kFireRate)].m_texture = TextureID::kEntities;
-	data[static_cast<int>(PickupType::kFireSpread)].m_texture_rect = sf::IntRect({ 120, 64 }, { 40, 40 });
-	data[static_cast<int>(PickupType::kFireRate)].m_action = std::bind(&Aircraft::IncreaseFireRate, std::placeholders::_1);
+	data[static_cast<int>(PickupType::kFireRate)].m_texture_rect = sf::IntRect({ 120, 64 }, { 40, 40 });
+	data[static_cast<int>(PickupType::kFireRate)].m_action = [](Aircraft& a)
+		{
+			a.GetWeaponSystem().IncreaseFireRate();
+		};
 	return data;
 }
 

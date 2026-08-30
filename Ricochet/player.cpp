@@ -1,5 +1,7 @@
 #include "player.hpp"
 #include "aircraft.hpp"
+#include "movement_controller.hpp"
+#include "weapon_system.hpp"
 #include <cmath>
 
 struct AircraftMover
@@ -24,8 +26,8 @@ struct AircraftRotator
         if (speed > 0.f)
         {
             aircraft.rotate(sf::degrees(rotation));
-            aircraft.AlignVelocityToRotation();
-            aircraft.StoreVelocityAtRelease();
+            aircraft.GetMovementController().AlignVelocityToRotation();
+            aircraft.GetMovementController().StoreVelocityAtRelease();
         }
     }
 
@@ -45,9 +47,9 @@ struct AircraftForwardMover
         sf::Vector2f currentVelocity = aircraft.GetVelocity();
         float currentSpeed = std::sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y);
 
-        aircraft.IncrementForwardTime(dt);
+        aircraft.GetMovementController().IncrementForwardTime(dt);
 
-        float holdTime = aircraft.GetForwardAccelerationTime().asSeconds();
+        float holdTime = aircraft.GetMovementController().GetForwardAccelerationTime().asSeconds();
 
         const float accelerationRate = 300.f;
         const float boostedAccelerationRate = 15000.f;
@@ -77,9 +79,9 @@ struct AircraftForwardAccelerationReset
 {
     void operator()(Aircraft& aircraft, sf::Time) const
     {
-        aircraft.ResetForwardTime();
-        aircraft.ResetReleaseTime();
-        aircraft.StoreVelocityAtRelease();
+        aircraft.GetMovementController().ResetForwardTime();
+        aircraft.GetMovementController().ResetReleaseTime();
+        aircraft.GetMovementController().StoreVelocityAtRelease();
     }
 };
 
@@ -87,15 +89,15 @@ struct AircraftDecelerator
 {
     void operator()(Aircraft& aircraft, sf::Time dt) const
     {
-        aircraft.IncrementReleaseTime(dt);
+        aircraft.GetMovementController().IncrementReleaseTime(dt);
 
-        float releaseTime = aircraft.GetReleaseTime().asSeconds();
+        float releaseTime = aircraft.GetMovementController().GetReleaseTime().asSeconds();
 
         if (releaseTime >= 0.5f && releaseTime < 3.0f)
         {
             float decelerationProgress = (releaseTime - 0.5f) / 2.5f;
             float decelerationFactor = 1.0f - decelerationProgress;
-            sf::Vector2f initialVelocity = aircraft.GetVelocityAtRelease();
+            sf::Vector2f initialVelocity = aircraft.GetMovementController().GetVelocityAtRelease();
             aircraft.SetVelocity(initialVelocity.x * decelerationFactor, initialVelocity.y * decelerationFactor);
         }
         else if (releaseTime >= 3.0f)
@@ -288,12 +290,12 @@ void Player::InitialiseActions()
     m_action_binding[Action::kMoveUp].action = DerivedAction<Aircraft>(AircraftForwardMover());
     m_action_binding[Action::kBulletFire].action = DerivedAction<Aircraft>([](Aircraft& a, sf::Time dt)
         {
-            a.Fire();
+            a.GetWeaponSystem().Fire();
         }
     );
     m_action_binding[Action::kMissileFire].action = DerivedAction<Aircraft>([](Aircraft& a, sf::Time dt)
         {
-            a.LaunchMissile();
+            a.GetWeaponSystem().LaunchMissile();
         }
     );
 
