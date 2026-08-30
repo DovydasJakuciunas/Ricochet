@@ -198,17 +198,54 @@ void Aircraft::CreateProjectile(SceneNode& node, ProjectileType type, float x_of
 	if (m_is_launching_missile || m_is_firing)
 	{
 		std::unique_ptr<Projectile> projectile(new Projectile(type, textures));
-		sf::Vector2f offset(x_offset * m_sprite.getGlobalBounds().size.x, y_offset * m_sprite.getGlobalBounds().size.y);
-		sf::Vector2f velocity(0, projectile->GetMaxSpeed());
+		sf::Vector2f spawnPosition = GetBulletSpawnPosition(x_offset);
+
+		// Calculate velocity in the direction the jet is facing
+		float rotationDegrees = getRotation().asDegrees();
+		double rotationRadians = Utility::toRadians(rotationDegrees + -90.f);
+		float maxSpeed = projectile->GetMaxSpeed();
+
+		float dirX = -std::cos(rotationRadians);
+		float dirY = -std::sin(rotationRadians);
 
 		float sign = IsAllied() ? -1.f : 1.f;
-		projectile->setPosition(GetWorldPosition() + offset * sign);
-		projectile->SetVelocity(velocity * sign);
+		sf::Vector2f velocity(dirX * maxSpeed * sign, dirY * maxSpeed * sign);
+
+		projectile->setPosition(spawnPosition);
+		projectile->SetVelocity(velocity);
 		node.AttachChild(std::move(projectile));
 		m_is_launching_missile = false;
 	}
-
 }
+
+sf::Vector2f Aircraft::GetBulletSpawnPosition(float x_offset) const
+{
+	// Get the jet's bounding box and center
+	sf::FloatRect bounds = m_sprite.getGlobalBounds();
+	sf::Vector2f jetCenter = GetWorldPosition();
+
+	// Calculate the front (nose) of the jet based on rotation
+	// The jet's front is perpendicular to its body, pointing in the direction it's facing
+	float rotationDegrees = getRotation().asDegrees();
+	double rotationRadians = Utility::toRadians(rotationDegrees + 90.f);
+
+	// Distance from center to front of jet (half height)
+	float frontDistance = bounds.size.y * 0.5f;
+
+	// Calculate front position based on rotation
+	float frontX = -std::cos(rotationRadians) * frontDistance;
+	float frontY = -std::sin(rotationRadians) * frontDistance;
+
+	// Apply horizontal spread offset at the front
+	float spreadOffsetX = x_offset * bounds.size.x;
+	double spreadRotationRadians = Utility::toRadians(rotationDegrees);
+	float perpX = -std::cos(spreadRotationRadians) * spreadOffsetX;
+	float perpY = -std::sin(spreadRotationRadians) * spreadOffsetX;
+
+	sf::Vector2f spawnPos = jetCenter + sf::Vector2f(frontX + perpX, frontY + perpY);
+	return spawnPos;
+}
+
 
 sf::FloatRect Aircraft::GetBoundingRect() const
 {

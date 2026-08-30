@@ -26,6 +26,7 @@ public:
 	void LaunchMissile();
 	void CreateBullet(SceneNode& node, const TextureHolder& textures);
 	void CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures);
+	sf::Vector2f GetBulletSpawnPosition(float x_offset) const;
 
 	sf::FloatRect GetBoundingRect() const override;
 	bool IsMarkedForRemoval() const override;
