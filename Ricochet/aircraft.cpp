@@ -238,6 +238,11 @@ void Aircraft::SetPlayerID(PlayerID player_id)
 	m_player_id = player_id;
 }
 
+const sf::Sprite& Aircraft::GetSprite() const
+{
+	return m_sprite;
+}
+
 AircraftType Aircraft::GetAircraftType() const
 {
 	return m_type;

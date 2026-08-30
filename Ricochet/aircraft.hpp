@@ -40,6 +40,9 @@ public:
 	// Respawn method
 	void Respawn();
 
+	// Sprite access for weapon system
+	const sf::Sprite& GetSprite() const;
+
 	// Subsystem access
 	WeaponSystem& GetWeaponSystem();
 	const WeaponSystem& GetWeaponSystem() const;

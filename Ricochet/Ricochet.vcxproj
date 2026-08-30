@@ -228,7 +228,6 @@
     <ClCompile Include="label.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="menu_state.cpp" />
-    <ClCompile Include="MissionStatus.cpp" />
     <ClCompile Include="movement_controller.cpp" />
     <ClCompile Include="music_player.cpp" />
     <ClCompile Include="particle.cpp" />

@@ -2,13 +2,13 @@
 #include <SFML/Graphics.hpp>
 #include <memory>
 #include "command_queue.hpp"
+#include "resource_identifiers.hpp"
 
 class Aircraft;
 class SceneNode;
 class CollisionHandler;
 class GameplayManager;
 class PhysicsSimulator;
-class TextureHolder;
 class SoundPlayer;
 
 class GameplayCoordinator

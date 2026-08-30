@@ -52,7 +52,7 @@ WeaponSystem::WeaponSystem(Aircraft* aircraft, const TextureHolder& textures)
 
 void WeaponSystem::Fire()
 {
-	if (Table[static_cast<int>(m_aircraft->m_type)].m_fire_interval != sf::Time::Zero)
+	if (Table[static_cast<int>(m_aircraft->GetAircraftType())].m_fire_interval != sf::Time::Zero)
 	{
 		m_is_firing = true;
 	}
@@ -119,7 +119,7 @@ void WeaponSystem::CheckProjectileLaunch(sf::Time dt, CommandQueue& commands)
 	{
 		PlayLocalSound(commands, IsAllied() ? SoundEffect::kEnemyGunfire : SoundEffect::kAlliedGunfire);
 		commands.Push(m_fire_command);
-		m_fire_countdown += Table[static_cast<int>(m_aircraft->m_type)].m_fire_interval / (m_fire_rate + 1.f);
+		m_fire_countdown += Table[static_cast<int>(m_aircraft->GetAircraftType())].m_fire_interval / (m_fire_rate + 1.f);
 	}
 	else if (m_fire_countdown > sf::Time::Zero)
 	{
@@ -204,7 +204,8 @@ void WeaponSystem::CreateProjectile(SceneNode& node, ProjectileType type, float 
 sf::Vector2f WeaponSystem::GetBulletSpawnPosition(float x_offset) const
 {
 	// Get the jet's bounding box and center
-	sf::FloatRect bounds = m_aircraft->m_sprite.getGlobalBounds();
+	const sf::Sprite& sprite = m_aircraft->GetSprite();
+	sf::FloatRect bounds = sprite.getGlobalBounds();
 	sf::Vector2f jetCenter = m_aircraft->GetWorldPosition();
 
 	// Calculate the front (nose) of the jet based on rotation
