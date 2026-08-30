@@ -10,6 +10,9 @@
 #include "particletype.hpp"
 #include "sound_node.hpp"
 #include "entity.hpp"
+#include "collision_handler.hpp"
+#include "gameplay_manager.hpp"
+#include "physics_simulator.hpp"
 
 World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sounds)
 	: m_target(output_target)
@@ -24,13 +27,12 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_spawn_position_p2(sf::Vector2f(0.f, 0.f))
 	, m_player_aircraft(nullptr)
 	, m_player_aircraft_p2(nullptr)
-	, m_player1_kills(0)
-	, m_player2_kills(0)
-	, m_player1_was_alive(true)
-	, m_player2_was_alive(true)
 	, m_player1_kill_display(nullptr)
 	, m_player2_kill_display(nullptr)
 	, m_pickup_spawn_timer(sf::seconds(0.f))
+	, m_collision_handler(nullptr)
+	, m_gameplay_manager(nullptr)
+	, m_physics_simulator(nullptr)
 {
 	m_scene_texture.resize({ m_target.getSize().x, m_target.getSize().y });
 	LoadTextures();
@@ -40,7 +42,6 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 
 void World::Update(sf::Time dt)
 {
-
 	GuideMissiles();
 
 	//UpdateSounds();
@@ -50,54 +51,47 @@ void World::Update(sf::Time dt)
 	{
 		m_scene_graph.OnCommand(m_command_queue.Pop(), dt);
 	}
-	HandleCollisions();
 
-	// Detect kills BEFORE RemoveWrecks - check if players changed from alive to dead
-	bool player1_alive = m_player_aircraft && !m_player_aircraft->IsMarkedForRemoval();
-	bool player2_alive = m_player_aircraft_p2 && !m_player_aircraft_p2->IsMarkedForRemoval();
-
-	// Player 1 was alive but is now dead - Player 2 gets a kill and Player 1 respawns
-	if (m_player1_was_alive && !player1_alive && m_player_aircraft)
+	// Use collision handler to process all collisions
+	if (m_collision_handler)
 	{
-		IncrementPlayer2Kills();
-		// Respawn Player 1 BEFORE RemoveWrecks
-		m_player_aircraft->Respawn();
-		m_player_aircraft->setPosition(m_spawn_position);
-		player1_alive = true;
+		m_collision_handler->HandleCollisions();
 	}
 
-	// Player 2 was alive but is now dead - Player 1 gets a kill and Player 2 respawns
-	if (m_player2_was_alive && !player2_alive && m_player_aircraft_p2)
+	// Detect kills and handle respawns using gameplay manager
+	if (m_gameplay_manager)
 	{
-		IncrementPlayer1Kills();
-		// Respawn Player 2 BEFORE RemoveWrecks
-		m_player_aircraft_p2->Respawn();
-		m_player_aircraft_p2->setPosition(m_spawn_position_p2);
-		player2_alive = true;
-	}
+		m_gameplay_manager->Update(m_player_aircraft, m_player_aircraft_p2);
 
-	// Update alive status for next frame
-	m_player1_was_alive = player1_alive;
-	m_player2_was_alive = player2_alive;
+		// Check if players died and respawn them
+		bool player1_alive = m_player_aircraft && !m_player_aircraft->IsMarkedForRemoval();
+		bool player2_alive = m_player_aircraft_p2 && !m_player_aircraft_p2->IsMarkedForRemoval();
+
+		if (!player1_alive && m_player_aircraft)
+		{
+			m_player_aircraft->Respawn();
+			m_player_aircraft->setPosition(m_spawn_position);
+		}
+
+		if (!player2_alive && m_player_aircraft_p2)
+		{
+			m_player_aircraft_p2->Respawn();
+			m_player_aircraft_p2->setPosition(m_spawn_position_p2);
+		}
+	}
 
 	m_scene_graph.RemoveWrecks();
-
-	// Update kill count displays
-	if (m_player1_kill_display)
-	{
-		m_player1_kill_display->SetString("P1 Kills: " + std::to_string(m_player1_kills));
-	}
-	if (m_player2_kill_display)
-	{
-		m_player2_kill_display->SetString("P2 Kills: " + std::to_string(m_player2_kills));
-	}
 
 	m_scene_graph.Update(dt, m_command_queue);
 
 	SpawnRandomPickups();
 
-	BounceProjectiles();
-	AdaptPlayerPosition();
+	// Use physics simulator for physics updates
+	if (m_physics_simulator)
+	{
+		m_physics_simulator->BounceProjectiles(m_command_queue);
+		m_physics_simulator->HandlePlayerBoundaryCollision(m_player_aircraft, m_player_aircraft_p2);
+	}
 }
 
 void World::Draw()
@@ -115,6 +109,17 @@ void World::Draw()
 		m_target.setView(m_camera);
 		m_target.draw(m_scene_graph);
 	}
+
+	// Draw kill displays with default view (HUD layer - stays fixed on screen)
+	m_target.setView(m_target.getDefaultView());
+	if (m_player1_kill_display)
+	{
+		m_target.draw(*m_player1_kill_display);
+	}
+	if (m_player2_kill_display)
+	{
+		m_target.draw(*m_player2_kill_display);
+	}
 }
 
 CommandQueue& World::GetCommandQueue()
@@ -124,7 +129,33 @@ CommandQueue& World::GetCommandQueue()
 
 bool World::HasAlivePlayer() const
 {
-	return !m_player_aircraft->IsMarkedForRemoval();
+	return m_player_aircraft && !m_player_aircraft->IsMarkedForRemoval();
+}
+
+int World::GetPlayer1Kills() const
+{
+	return m_gameplay_manager ? m_gameplay_manager->GetPlayer1Kills() : 0;
+}
+
+int World::GetPlayer2Kills() const
+{
+	return m_gameplay_manager ? m_gameplay_manager->GetPlayer2Kills() : 0;
+}
+
+void World::IncrementPlayer1Kills()
+{
+	if (m_gameplay_manager)
+	{
+		m_gameplay_manager->IncrementPlayer1Kills();
+	}
+}
+
+void World::IncrementPlayer2Kills()
+{
+	if (m_gameplay_manager)
+	{
+		m_gameplay_manager->IncrementPlayer2Kills();
+	}
 }
 
 void World::LoadTextures()
@@ -183,132 +214,32 @@ void World::BuildScene()
 	std::unique_ptr<ParticleNode> propellantNode(new ParticleNode(ParticleType::kPropellant, m_textures));
 	m_scene_layers[static_cast<int>(SceneLayers::kLowerAir)]->AttachChild(std::move(propellantNode));
 
-	// Create kill count displays
-	std::string* p1_kill_text = new std::string("Kills: 0");
-	std::unique_ptr<TextNode> p1_kill_display(new TextNode(m_fonts, *p1_kill_text));
-	m_player1_kill_display = p1_kill_display.get();
-	m_player1_kill_display->setPosition(sf::Vector2f(20.f, 20.f));
-	m_player1_kill_display->setScale(sf::Vector2f(0.8f, 0.8f));
-	m_scene_graph.AttachChild(std::move(p1_kill_display));
-
-	std::string* p2_kill_text = new std::string("Kills: 0");
-	std::unique_ptr<TextNode> p2_kill_display(new TextNode(m_fonts, *p2_kill_text));
-	m_player2_kill_display = p2_kill_display.get();
-	m_player2_kill_display->setPosition(sf::Vector2f(m_camera.getSize().x - 200.f, 20.f));
-	m_player2_kill_display->setScale(sf::Vector2f(0.8f, 0.8f));
-	m_scene_graph.AttachChild(std::move(p2_kill_display));
+	KillGUI();
 
 	//Add sound effect node
 	std::unique_ptr<SoundNode> soundNode(new SoundNode(m_sounds));
 	m_scene_graph.AttachChild(std::move(soundNode));
+
+	// Initialize subsystems after players and UI are created
+	m_collision_handler = std::make_unique<CollisionHandler>(m_player_aircraft, m_player_aircraft_p2, 
+																  m_scene_graph, m_command_queue, m_sounds);
+	m_gameplay_manager = std::make_unique<GameplayManager>(m_player_aircraft, m_player_aircraft_p2,
+														   m_player1_kill_display.get(), m_player2_kill_display.get());
+	m_physics_simulator = std::make_unique<PhysicsSimulator>(m_world_bounds, m_camera);
 }
 
-void World::AdaptPlayerPosition()
+void World::KillGUI()
 {
-	HandlePlayerBoundaryCollision();
-}
+	// Create kill count displays (HUD elements - not attached to scene graph)
+	std::string* p1_kill_text = new std::string("P1 Kills: 0");
+	m_player1_kill_display = std::make_unique<TextNode>(m_fonts, *p1_kill_text);
+	m_player1_kill_display->setPosition(sf::Vector2f(90.f, 30.f));
+	m_player1_kill_display->setScale(sf::Vector2f(2.f, 2.f));
 
-void World::HandlePlayerBoundaryCollision()
-{
-	// Keep player within the camera view bounds with a border
-	sf::FloatRect view_bounds(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());
-	const float border_distance = 40.f;
-
-	// Handle Player 1 collision
-	if (m_player_aircraft)
-	{
-		sf::Vector2f position = m_player_aircraft->getPosition();
-		sf::FloatRect player_bounds = m_player_aircraft->GetBoundingRect();
-
-		// Keep player within bounds (invert velocity and rotation on wall collision)
-		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
-		{
-			// Hit left boundary - invert X velocity and rotation
-			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
-			m_player_aircraft->InvertVelocityX();
-			m_player_aircraft->InvertRotation();
-		}
-		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
-		{
-			// Hit right boundary - invert X velocity and rotation
-			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
-			m_player_aircraft->InvertVelocityX();
-			m_player_aircraft->InvertRotation();
-		}
-
-		// Keep player within bounds vertically
-		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
-		{
-			// Hit top boundary - invert Y velocity and rotation
-			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
-			m_player_aircraft->InvertVelocityY();
-			m_player_aircraft->InvertRotation();
-		}
-		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
-		{
-			// Hit bottom boundary - invert Y velocity and rotation
-			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
-			m_player_aircraft->InvertVelocityY();
-			m_player_aircraft->InvertRotation();
-		}
-
-		m_player_aircraft->setPosition(position);
-	}
-
-	// Handle Player 2 collision (same logic)
-	if (m_player_aircraft_p2)
-	{
-		sf::Vector2f position = m_player_aircraft_p2->getPosition();
-		sf::FloatRect player_bounds = m_player_aircraft_p2->GetBoundingRect();
-
-		// Keep player within bounds (invert velocity and rotation on wall collision)
-		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
-		{
-			// Hit left boundary - invert X velocity and rotation
-			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
-			m_player_aircraft_p2->InvertVelocityX();
-			m_player_aircraft_p2->InvertRotation();
-		}
-		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
-		{
-			// Hit right boundary - invert X velocity and rotation
-			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
-			m_player_aircraft_p2->InvertVelocityX();
-			m_player_aircraft_p2->InvertRotation();
-		}
-
-		// Keep player within bounds vertically
-		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
-		{
-			// Hit top boundary - invert Y velocity and rotation
-			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
-			m_player_aircraft_p2->InvertVelocityY();
-			m_player_aircraft_p2->InvertRotation();
-		}
-		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
-		{
-			// Hit bottom boundary - invert Y velocity and rotation
-			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
-			m_player_aircraft_p2->InvertVelocityY();
-			m_player_aircraft_p2->InvertRotation();
-		}
-
-		m_player_aircraft_p2->setPosition(position);
-	}
-}
-
-sf::FloatRect World::GetViewBounds() const
-{
-	return sf::FloatRect(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());;
-}
-
-sf::FloatRect World::GetBattleFieldBounds() const
-{
-	//Return camera bounds + a small area off screen where the enemies spawn
-	sf::FloatRect bounds = GetViewBounds();
-	bounds.position.y -= 100.f;
-	bounds.size.y += 100.f;
-	return bounds;
+	std::string* p2_kill_text = new std::string("P2 Kills: 0");
+	m_player2_kill_display = std::make_unique<TextNode>(m_fonts, *p2_kill_text);
+	m_player2_kill_display->setPosition(sf::Vector2f(m_target.getSize().x - 70.f, 30.f));
+	m_player2_kill_display->setScale(sf::Vector2f(2.f, 2.f));
 }
 
 void World::GuideMissiles()
@@ -356,177 +287,6 @@ void World::GuideMissiles()
 	//m_active_enemies.clear();
 }
 
-bool MatchesCategories(SceneNode::Pair& colliders, ReceiverCategories type1, ReceiverCategories type2)
-{
-	unsigned int category1 = colliders.first->GetCategory();
-	unsigned int category2 = colliders.second->GetCategory();
-
-	if ((static_cast<int>(type1) & category1) && (static_cast<int>(type2) & category2))
-	{
-		return true;
-	}
-	else if ((static_cast<int>(type1) & category2) && (static_cast<int>(type2) & category1))
-	{
-		std::swap(colliders.first, colliders.second);
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-
-}
-
-void World::HandleCollisions()
-{
-	std::set<SceneNode::Pair> collision_pairs;
-	m_scene_graph.CheckSceneCollision(m_scene_graph, collision_pairs);
-
-	for (SceneNode::Pair pair : collision_pairs)
-	{
-		// Player-to-Player collision
-		if ((MatchesCategories(pair, ReceiverCategories::kPlayer1Aircraft, ReceiverCategories::kPlayer2Aircraft)))
-		{
-			auto& player1 = static_cast<Aircraft&>(*pair.first);
-			auto& player2 = static_cast<Aircraft&>(*pair.second);
-
-			// Skip collision if either player is immune
-			if (player1.IsCollisionImmune() || player2.IsCollisionImmune())
-			{
-				continue;
-			}
-
-			// Calculate velocity magnitudes
-			sf::Vector2f vel1 = player1.GetVelocity();
-			sf::Vector2f vel2 = player2.GetVelocity();
-			float speed1 = std::sqrt(vel1.x * vel1.x + vel1.y * vel1.y);
-			float speed2 = std::sqrt(vel2.x * vel2.x + vel2.y * vel2.y);
-
-			// Calculate bounce direction (from player1 to player2)
-			sf::Vector2f dir = player2.GetWorldPosition() - player1.GetWorldPosition();
-			float distance = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-			if (distance > 0.f)
-			{
-				dir /= distance;  // Normalize
-			}
-			else
-			{
-				dir = sf::Vector2f(1.f, 0.f);  // Default direction if at same position
-			}
-
-			// Bounce velocity magnitude
-			constexpr float kBounceForce = 300.f;
-
-			// Apply bounce velocities (push players apart)
-			player1.SetVelocity(player1.GetVelocity() - dir * kBounceForce);
-			player2.SetVelocity(player2.GetVelocity() + dir * kBounceForce);
-
-			// Grace period duration (0.5 seconds)
-			constexpr sf::Time kCollisionGracePeriod = sf::milliseconds(500);
-
-			// Only the slower player takes damage
-			if (speed1 < speed2)
-			{
-				player1.Damage(10);
-				player1.SetCollisionImmunity(kCollisionGracePeriod);
-			}
-			else if (speed2 < speed1)
-			{
-				player2.Damage(10);
-				player2.SetCollisionImmunity(kCollisionGracePeriod);
-			}
-			// If speeds are equal, both take damage and both get immunity
-			else
-			{
-				player1.Damage(10);
-				player2.Damage(10);
-				player1.SetCollisionImmunity(kCollisionGracePeriod);
-				player2.SetCollisionImmunity(kCollisionGracePeriod);
-			}
-		}
-		// Legacy single-player collision handling
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayerAircraft, ReceiverCategories::kEnemyAircraft))
-		{
-			auto& player = static_cast<Aircraft&>(*pair.first);
-			auto& enemy = static_cast<Aircraft&>(*pair.second);
-			//Collision response
-			player.Damage(enemy.GetHitPoints());
-			enemy.Destroy();
-		}
-		// Pickup collection - Player 1
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer1Aircraft, ReceiverCategories::kPickup))
-		{
-			auto& aircraft = static_cast<Aircraft&>(*pair.first);
-			auto& pickup = static_cast<Pickup&>(*pair.second);
-			//Collision response
-			pickup.Apply(aircraft);
-			pickup.Destroy();
-			aircraft.PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
-		}
-		// Pickup collection - Player 2
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer2Aircraft, ReceiverCategories::kPickup))
-		{
-			auto& aircraft = static_cast<Aircraft&>(*pair.first);
-			auto& pickup = static_cast<Pickup&>(*pair.second);
-			//Collision response
-			pickup.Apply(aircraft);
-			pickup.Destroy();
-			aircraft.PlayLocalSound(m_command_queue, SoundEffect::kCollectPickup);
-		}
-		// Player 1 hit by any projectile (check owner for PvP)
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer1Aircraft, ReceiverCategories::kAlliedProjectile))
-		{
-			auto& player = static_cast<Aircraft&>(*pair.first);
-			auto& projectile = static_cast<Projectile&>(*pair.second);
-			// In PvP, Player 1 can be damaged by Player 2's projectiles
-			if (projectile.GetOwnerPlayerID() == PlayerID::kPlayer2)
-			{
-				player.Damage(projectile.GetDamage());
-				projectile.Destroy();
-			}
-		}
-		// Player 1 hit by enemy projectile
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer1Aircraft, ReceiverCategories::kEnemyProjectile))
-		{
-			auto& player = static_cast<Aircraft&>(*pair.first);
-			auto& projectile = static_cast<Projectile&>(*pair.second);
-			//Collision response
-			player.Damage(projectile.GetDamage());
-			projectile.Destroy();
-		}
-		// Player 2 hit by any projectile (check owner for PvP)
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer2Aircraft, ReceiverCategories::kAlliedProjectile))
-		{
-			auto& player = static_cast<Aircraft&>(*pair.first);
-			auto& projectile = static_cast<Projectile&>(*pair.second);
-			// In PvP, Player 2 can be damaged by Player 1's projectiles
-			if (projectile.GetOwnerPlayerID() == PlayerID::kPlayer1)
-			{
-				player.Damage(projectile.GetDamage());
-				projectile.Destroy();
-			}
-		}
-		// Player 2 hit by enemy projectile
-		else if (MatchesCategories(pair, ReceiverCategories::kPlayer2Aircraft, ReceiverCategories::kEnemyProjectile))
-		{
-			auto& player = static_cast<Aircraft&>(*pair.first);
-			auto& projectile = static_cast<Projectile&>(*pair.second);
-			//Collision response
-			player.Damage(projectile.GetDamage());
-			projectile.Destroy();
-		}
-		// Legacy enemy hit by player projectile
-		else if (MatchesCategories(pair, ReceiverCategories::kEnemyAircraft, ReceiverCategories::kAlliedProjectile))
-		{
-			auto& aircraft = static_cast<Aircraft&>(*pair.first);
-			auto& projectile = static_cast<Projectile&>(*pair.second);
-			//Collision response
-			aircraft.Damage(projectile.GetDamage());
-			projectile.Destroy();
-		}
-	}
-}
-
 void World::UpdateSounds()
 {
 	sf::Vector2f listener_position;
@@ -538,98 +298,17 @@ void World::UpdateSounds()
 	m_sounds.RemoveStoppedSounds();
 }
 
-void World::BounceProjectiles()
-{
-	// Apply bouncing to all projectiles in the scene
-	Command projectileBouncer;
-	projectileBouncer.category = static_cast<int>(ReceiverCategories::kProjectile);
-	projectileBouncer.action = DerivedAction<SceneNode>([this](SceneNode& node, sf::Time)
-		{
-			BounceEntity(&node);
-		});
-	m_command_queue.Push(projectileBouncer);
-}
-
-void World::BounceEntity(SceneNode* entity)
-{
-	if (!entity)
-		return;
-
-	// Get entity bounds and velocity
-	sf::FloatRect bounds = entity->GetBoundingRect();
-
-	// Cast to Entity to access velocity methods
-	Entity* moving_entity = dynamic_cast<Entity*>(entity);
-	if (!moving_entity)
-		return;
-
-	sf::Vector2f velocity = moving_entity->GetVelocity();
-	sf::Vector2f position = entity->getPosition();
-
-	bool bounced = false;
-
-	// Check collision with left and right walls
-	if (bounds.position.x <= m_world_bounds.position.x)
-	{
-		// Hit left wall - bounce back right
-		velocity.x = std::abs(velocity.x);
-		position.x = m_world_bounds.position.x + (bounds.size.x / 2.f);
-		bounced = true;
-	}
-	else if (bounds.position.x + bounds.size.x >= m_world_bounds.position.x + m_world_bounds.size.x)
-	{
-		// Hit right wall - bounce back left
-		velocity.x = -std::abs(velocity.x);
-		position.x = m_world_bounds.position.x + m_world_bounds.size.x - (bounds.size.x / 2.f);
-		bounced = true;
-	}
-
-	// Check collision with top and bottom walls
-	if (bounds.position.y <= m_world_bounds.position.y)
-	{
-		// Hit top wall - bounce down
-		velocity.y = std::abs(velocity.y);
-		position.y = m_world_bounds.position.y + (bounds.size.y / 2.f);
-		bounced = true;
-	}
-	else if (bounds.position.y + bounds.size.y >= m_world_bounds.position.y + m_world_bounds.size.y)
-	{
-		// Hit bottom wall - bounce up
-		velocity.y = -std::abs(velocity.y);
-		position.y = m_world_bounds.position.y + m_world_bounds.size.y - (bounds.size.y / 2.f);
-		bounced = true;
-	}
-
-	// If projectile bounced, increment bounce count and check limit
-	if (bounced)
-	{
-		Projectile* projectile = dynamic_cast<Projectile*>(entity);
-		if (projectile)
-		{
-			projectile->IncrementBounceCount();
-			if (projectile->HasExceededBounceLimit())
-			{
-				projectile->Destroy();
-				return;  // Don't apply velocity if destroying
-			}
-		}
-	}
-
-	// Apply new velocity and position
-	moving_entity->SetVelocity(velocity);
-	entity->setPosition(position);
-}
-
 void World::SpawnRandomPickups()
 {
 	// Spawn pickups every 3 seconds using a fixed timer
 	m_pickup_spawn_timer -= sf::seconds(1.f / 60.f);  // Assuming 60 FPS
 
-	if (m_pickup_spawn_timer <= sf::seconds(0.f))
+	if (m_pickup_spawn_timer <= sf::Time::Zero)
 	{
 		m_pickup_spawn_timer = sf::seconds(3.f);  // Reset timer to 3 seconds
 
-		sf::FloatRect view_bounds = GetViewBounds();
+		// Compute view bounds directly
+		sf::FloatRect view_bounds(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());
 
 		// Add a border margin to keep pickups away from edges
 		const float border = 50.f;
@@ -653,22 +332,3 @@ void World::SpawnRandomPickups()
 	}
 }
 
-int World::GetPlayer1Kills() const
-{
-	return m_player1_kills;
-}
-
-int World::GetPlayer2Kills() const
-{
-	return m_player2_kills;
-}
-
-void World::IncrementPlayer1Kills()
-{
-	m_player1_kills++;
-}
-
-void World::IncrementPlayer2Kills()
-{
-	m_player2_kills++;
-}

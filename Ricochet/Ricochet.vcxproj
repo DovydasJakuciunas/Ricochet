@@ -153,6 +153,7 @@
     <ClInclude Include="bloom_effect.hpp" />
     <ClInclude Include="button.hpp" />
     <ClInclude Include="button_type.hpp" />
+    <ClInclude Include="collision_handler.hpp" />
     <ClInclude Include="command.hpp" />
     <ClInclude Include="command_queue.hpp" />
     <ClInclude Include="component.hpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="emitter_node.hpp" />
     <ClInclude Include="entity.hpp" />
     <ClInclude Include="fontID.hpp" />
+    <ClInclude Include="gameplay_manager.hpp" />
     <ClInclude Include="game_over_state.hpp" />
     <ClInclude Include="game_state.hpp" />
     <ClInclude Include="label.hpp" />
@@ -175,6 +177,7 @@
     <ClInclude Include="particletype.hpp" />
     <ClInclude Include="particle_node.hpp" />
     <ClInclude Include="pause_state.hpp" />
+    <ClInclude Include="physics_simulator.hpp" />
     <ClInclude Include="pickup.hpp" />
     <ClInclude Include="pickup_type.hpp" />
     <ClInclude Include="player.hpp" />
@@ -209,11 +212,13 @@
     <ClCompile Include="application.cpp" />
     <ClCompile Include="bloom_effect.cpp" />
     <ClCompile Include="button.cpp" />
+    <ClCompile Include="collision_handler.cpp" />
     <ClCompile Include="command.cpp" />
     <ClCompile Include="command_queue.cpp" />
     <ClCompile Include="component.cpp" />
     <ClCompile Include="container.cpp" />
     <ClCompile Include="data_tables.cpp" />
+    <ClCompile Include="gameplay_manager.cpp" />
     <ClCompile Include="emitter_node.cpp" />
     <ClCompile Include="entity.cpp" />
     <ClCompile Include="game_over_state.cpp" />
@@ -227,6 +232,7 @@
     <ClCompile Include="particle.cpp" />
     <ClCompile Include="particle_node.cpp" />
     <ClCompile Include="pause_state.cpp" />
+    <ClCompile Include="physics_simulator.cpp" />
     <ClCompile Include="pickup.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="posteffect.cpp" />

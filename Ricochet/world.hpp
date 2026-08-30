@@ -10,6 +10,9 @@
 #include "sprite_node.hpp"
 #include "text_node.hpp"
 #include "utility.hpp"
+#include "collision_handler.hpp"
+#include "gameplay_manager.hpp"
+#include "physics_simulator.hpp"
 
 class World
 {
@@ -31,20 +34,11 @@ public:
 private:
 	void LoadTextures();
 	void BuildScene();
-	void AdaptPlayerPosition();
-	void HandlePlayerBoundaryCollision();
 
-	sf::FloatRect GetViewBounds() const;
-	sf::FloatRect GetBattleFieldBounds() const;
+	void KillGUI();
 
 	void GuideMissiles();
-
-	void HandleCollisions();
-
 	void UpdateSounds();
-
-	void BounceProjectiles();
-	void BounceEntity(SceneNode* entity);
 	void SpawnRandomPickups();
 
 private:
@@ -62,15 +56,9 @@ private:
 	Aircraft* m_player_aircraft;
 	Aircraft* m_player_aircraft_p2;
 
-	// Kill tracking
-	int m_player1_kills;
-	int m_player2_kills;
-	bool m_player1_was_alive;
-	bool m_player2_was_alive;
-
 	// Kill count UI
-	TextNode* m_player1_kill_display;
-	TextNode* m_player2_kill_display;
+	std::unique_ptr<TextNode> m_player1_kill_display;
+	std::unique_ptr<TextNode> m_player2_kill_display;
 
 	CommandQueue m_command_queue;
 	Command m_command;
@@ -78,5 +66,10 @@ private:
 	BloomEffect m_bloom_effect;
 	SpriteNode* m_background_sprite;
 	sf::Time m_pickup_spawn_timer;
+
+	// Subsystems
+	std::unique_ptr<CollisionHandler> m_collision_handler;
+	std::unique_ptr<GameplayManager> m_gameplay_manager;
+	std::unique_ptr<PhysicsSimulator> m_physics_simulator;
 };
 

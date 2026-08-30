@@ -2,7 +2,7 @@
 #include "mission_status.hpp"
 #include "statestack.hpp"
 
-GameState::GameState(StateStack& stack, Context context) : State(stack, context), m_world(*context.window, *context.fonts, *context.sound), m_player(*context.player)
+GameState::GameState(StateStack& stack, Context context) : State(stack, context), m_world(*context.window, *context.fonts, *context.sound), m_player(*context.player), m_game_won(false)
 {
 	
 	GetStack()->SetWorld(&m_world);
@@ -19,14 +19,20 @@ bool GameState::Update(sf::Time dt)
 	m_world.Update(dt);
 
 	// Check for win condition: first player to reach 3 kills wins
-	if (m_world.GetPlayer1Kills() >= 3)
+	if (!m_game_won && m_world.GetPlayer1Kills() >= 3)
 	{
+		m_game_won = true;
 		m_player.SetMissionStatus(MissionStatus::kMissionSuccess);  // Player 1 wins
+		m_player.SetPlayer1Kills(m_world.GetPlayer1Kills());
+		m_player.SetPlayer2Kills(m_world.GetPlayer2Kills());
 		RequestStackPush(StateID::kGameOver);
 	}
-	else if (m_world.GetPlayer2Kills() >= 3)
+	else if (!m_game_won && m_world.GetPlayer2Kills() >= 3)
 	{
+		m_game_won = true;
 		m_player.SetMissionStatus(MissionStatus::kMissionFailure);  // Player 2 wins
+		m_player.SetPlayer1Kills(m_world.GetPlayer1Kills());
+		m_player.SetPlayer2Kills(m_world.GetPlayer2Kills());
 		RequestStackPush(StateID::kGameOver);
 	}
 

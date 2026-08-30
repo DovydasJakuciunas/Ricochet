@@ -126,6 +126,10 @@ Player::Player()
     // Don't set category here - it will be set based on player_id when commands are created
     m_was_forward_pressed_p1 = false;
     m_was_forward_pressed_p2 = false;
+
+    // Initialize kill counts
+    m_player1_kills = 0;
+    m_player2_kills = 0;
 }
 
 void Player::HandleEvent(const sf::Event& event, CommandQueue& command_queue, PlayerID player_id)
@@ -247,6 +251,26 @@ void Player::SetMissionStatus(MissionStatus status, PlayerID player_id)
 MissionStatus Player::GetMissionStatus(PlayerID player_id) const
 {
     return (player_id == PlayerID::kPlayer1) ? m_current_mission_status_p1 : m_current_mission_status_p2;
+}
+
+void Player::SetPlayer1Kills(int kills)
+{
+    m_player1_kills = kills;
+}
+
+void Player::SetPlayer2Kills(int kills)
+{
+    m_player2_kills = kills;
+}
+
+int Player::GetPlayer1Kills() const
+{
+    return m_player1_kills;
+}
+
+int Player::GetPlayer2Kills() const
+{
+    return m_player2_kills;
 }
 
 void Player::InitialiseActions()

@@ -4,6 +4,7 @@
 TextNode::TextNode(const FontHolder& fonts, std::string& text)
 	:m_text(fonts.Get(FontID::kMain), text, 20)
 {
+	Utility::CentreOrigin(m_text);
 }
 
 void TextNode::SetString(const std::string& text)
