@@ -5,6 +5,13 @@
 
 class SceneNode;
 
+// Player identification enum
+enum class PlayerID
+{
+	kPlayer1,
+	kPlayer2
+};
+
 struct Command
 {
 	Command();

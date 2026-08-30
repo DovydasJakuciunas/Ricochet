@@ -18,16 +18,13 @@ struct AircraftRotator
     AircraftRotator(float rotation) : rotation(rotation) {}
     void operator()(Aircraft& aircraft, sf::Time) const
     {
-        // Only allow turning if there's forward acceleration (velocity > 0)
         sf::Vector2f velocity = aircraft.GetVelocity();
         float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
 
         if (speed > 0.f)
         {
             aircraft.rotate(sf::degrees(rotation));
-            // Always align velocity to rotation so movement follows the nose direction
             aircraft.AlignVelocityToRotation();
-            // Always update stored velocity so decelerator uses the new direction
             aircraft.StoreVelocityAtRelease();
         }
     }
@@ -48,12 +45,10 @@ struct AircraftForwardMover
         sf::Vector2f currentVelocity = aircraft.GetVelocity();
         float currentSpeed = std::sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y);
 
-        // Increment forward acceleration time
         aircraft.IncrementForwardTime(dt);
 
         float holdTime = aircraft.GetForwardAccelerationTime().asSeconds();
 
-        // Base acceleration rate
         const float accelerationRate = 300.f;
         const float boostedAccelerationRate = 15000.f;
         const float boostThreshold = 2.f;
@@ -61,7 +56,6 @@ struct AircraftForwardMover
         float deltaTime = dt.asSeconds();
         float acceleration = accelerationRate * deltaTime;
 
-        // Apply boosted acceleration if held for more than 2 seconds
         if (holdTime > boostThreshold)
         {
             acceleration = boostedAccelerationRate * deltaTime;
@@ -97,10 +91,8 @@ struct AircraftDecelerator
 
         float releaseTime = aircraft.GetReleaseTime().asSeconds();
 
-        // Deceleration: starts immediately after release, completes stop by 3 seconds (0.5s delay + 2.5s linear decel)
         if (releaseTime >= 0.5f && releaseTime < 3.0f)
         {
-            // Linearly decelerate over 2.5 seconds (from 0.5 to 3.0) based on initial velocity at release
             float decelerationProgress = (releaseTime - 0.5f) / 2.5f;
             float decelerationFactor = 1.0f - decelerationProgress;
             sf::Vector2f initialVelocity = aircraft.GetVelocityAtRelease();
@@ -108,7 +100,6 @@ struct AircraftDecelerator
         }
         else if (releaseTime >= 3.0f)
         {
-            // Stop completely after 3 seconds
             aircraft.SetVelocity(0.f, 0.f);
         }
     }
@@ -116,89 +107,122 @@ struct AircraftDecelerator
 
 Player::Player()
 {
-    m_key_binding[sf::Keyboard::Scancode::A] = Action::kMoveLeft;
-    m_key_binding[sf::Keyboard::Scancode::D] = Action::kMoveRight;
-    m_key_binding[sf::Keyboard::Scancode::W] = Action::kMoveUp;
-    m_key_binding[sf::Keyboard::Scancode::S] = Action::kMoveDown;
-    m_key_binding[sf::Keyboard::Scancode::Space] = Action::kBulletFire;
-    m_key_binding[sf::Keyboard::Scancode::M] = Action::kMissileFire;
+    // Player 1 Key Bindings (WASD + Space/M)
+    m_key_binding_p1[sf::Keyboard::Scancode::A] = Action::kMoveLeft;
+    m_key_binding_p1[sf::Keyboard::Scancode::D] = Action::kMoveRight;
+    m_key_binding_p1[sf::Keyboard::Scancode::W] = Action::kMoveUp;
+    m_key_binding_p1[sf::Keyboard::Scancode::E] = Action::kBulletFire;
+    m_key_binding_p1[sf::Keyboard::Scancode::Q] = Action::kMissileFire;
+
+    // Player 2 Key Bindings (Arrow Keys + Numpad 0/Numpad ./Numpad Decimal)
+    m_key_binding_p2[sf::Keyboard::Scancode::Left] = Action::kMoveLeft;
+    m_key_binding_p2[sf::Keyboard::Scancode::Right] = Action::kMoveRight;
+    m_key_binding_p2[sf::Keyboard::Scancode::Up] = Action::kMoveUp;
+    m_key_binding_p2[sf::Keyboard::Scancode::Numpad0] = Action::kBulletFire;
+    m_key_binding_p2[sf::Keyboard::Scancode::NumpadDecimal] = Action::kMissileFire;
 
     InitialiseActions();
 
-    for (auto& pair : m_action_binding)
-    {
-        pair.second.category = static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
-    }
-
-    m_was_forward_pressed = false;
+    // Don't set category here - it will be set based on player_id when commands are created
+    m_was_forward_pressed_p1 = false;
+    m_was_forward_pressed_p2 = false;
 }
 
-void Player::HandleEvent(const sf::Event& event, CommandQueue& command_queue)
+void Player::HandleEvent(const sf::Event& event, CommandQueue& command_queue, PlayerID player_id)
 {
     const auto* key_pressed = event.getIf<sf::Event::KeyPressed>();
     if (key_pressed)
     {
-        auto found = m_key_binding.find(key_pressed->scancode);
-        if (found != m_key_binding.end() && !IsRealTimeAction(found->second))
+        std::map<sf::Keyboard::Scancode, Action>& key_binding = 
+            (player_id == PlayerID::kPlayer1) ? m_key_binding_p1 : m_key_binding_p2;
+
+        auto found = key_binding.find(key_pressed->scancode);
+        if (found != key_binding.end() && !IsRealTimeAction(found->second))
         {
-            command_queue.Push(m_action_binding[found->second]);
+            Command cmd = m_action_binding[found->second];
+            // Set category based on which player this is for
+            cmd.category = (player_id == PlayerID::kPlayer1) ?
+                static_cast<unsigned int>(ReceiverCategories::kPlayer1Aircraft) :
+                static_cast<unsigned int>(ReceiverCategories::kPlayer2Aircraft);
+            command_queue.Push(cmd);
         }
     }
 }
 
-void Player::HandleRealTimeInput(CommandQueue& command_queue)
+void Player::HandleRealTimeInput(CommandQueue& command_queue, PlayerID player_id)
 {
-    bool is_forward_currently_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::W);
+    std::map<sf::Keyboard::Scancode, Action>& key_binding = 
+        (player_id == PlayerID::kPlayer1) ? m_key_binding_p1 : m_key_binding_p2;
 
-    for (auto pair : m_key_binding)
+    bool& was_forward_pressed = (player_id == PlayerID::kPlayer1) ? m_was_forward_pressed_p1 : m_was_forward_pressed_p2;
+
+    // Determine the forward key for each player
+    sf::Keyboard::Scancode forward_key = (player_id == PlayerID::kPlayer1) ? 
+        sf::Keyboard::Scancode::W : sf::Keyboard::Scancode::Up;
+
+    bool is_forward_currently_pressed = sf::Keyboard::isKeyPressed(forward_key);
+
+    // Determine category for this player
+    unsigned int player_category = (player_id == PlayerID::kPlayer1) ?
+        static_cast<unsigned int>(ReceiverCategories::kPlayer1Aircraft) :
+        static_cast<unsigned int>(ReceiverCategories::kPlayer2Aircraft);
+
+    for (auto pair : key_binding)
     {
         if (sf::Keyboard::isKeyPressed(pair.first) && IsRealTimeAction(pair.second))
         {
-            command_queue.Push(m_action_binding[pair.second]);
+            Command cmd = m_action_binding[pair.second];
+            cmd.category = player_category;
+            command_queue.Push(cmd);
         }
     }
 
-    // Reset forward acceleration time if W is not pressed but was pressed before
-    if (!is_forward_currently_pressed && m_was_forward_pressed)
+    // Reset forward acceleration time if forward key is not pressed but was pressed before
+    if (!is_forward_currently_pressed && was_forward_pressed)
     {
         Command reset_command;
-        reset_command.category = static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
+        reset_command.category = player_category;
         reset_command.action = DerivedAction<Aircraft>(AircraftForwardAccelerationReset());
         command_queue.Push(reset_command);
     }
 
-    // Apply deceleration when W is not pressed
+    // Apply deceleration when forward key is not pressed
     if (!is_forward_currently_pressed)
     {
         Command decelerate_command;
-        decelerate_command.category = static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
+        decelerate_command.category = player_category;
         decelerate_command.action = DerivedAction<Aircraft>(AircraftDecelerator());
         command_queue.Push(decelerate_command);
     }
 
-    m_was_forward_pressed = is_forward_currently_pressed;
+    was_forward_pressed = is_forward_currently_pressed;
 }
 
-void Player::AssignKey(Action action, sf::Keyboard::Scancode key)
+void Player::AssignKey(Action action, sf::Keyboard::Scancode key, PlayerID player_id)
 {
-    //Remove keys that are currently bound to the action
-    for (auto itr = m_key_binding.begin(); itr != m_key_binding.end();)
+    std::map<sf::Keyboard::Scancode, Action>& key_binding = 
+        (player_id == PlayerID::kPlayer1) ? m_key_binding_p1 : m_key_binding_p2;
+
+    for (auto itr = key_binding.begin(); itr != key_binding.end();)
     {
         if (itr->second == action)
         {
-            m_key_binding.erase(itr++);
+            key_binding.erase(itr++);
         }
         else
         {
             ++itr;
         }
     }
-    m_key_binding[key] = action;
+    key_binding[key] = action;
 }
 
-sf::Keyboard::Scancode Player::GetAssignedKey(Action action) const
+sf::Keyboard::Scancode Player::GetAssignedKey(Action action, PlayerID player_id) const
 {
-    for (auto pair : m_key_binding)
+    const std::map<sf::Keyboard::Scancode, Action>& key_binding = 
+        (player_id == PlayerID::kPlayer1) ? m_key_binding_p1 : m_key_binding_p2;
+
+    for (auto pair : key_binding)
     {
         if (pair.second == action)
         {
@@ -208,14 +232,21 @@ sf::Keyboard::Scancode Player::GetAssignedKey(Action action) const
     return sf::Keyboard::Scancode::Unknown;
 }
 
-void Player::SetMissionStatus(MissionStatus status)
+void Player::SetMissionStatus(MissionStatus status, PlayerID player_id)
 {
-    m_current_mission_status = status;
+    if (player_id == PlayerID::kPlayer1)
+    {
+        m_current_mission_status_p1 = status;
+    }
+    else
+    {
+        m_current_mission_status_p2 = status;
+    }
 }
 
-MissionStatus Player::GetMissionStatus() const
+MissionStatus Player::GetMissionStatus(PlayerID player_id) const
 {
-    return m_current_mission_status;
+    return (player_id == PlayerID::kPlayer1) ? m_current_mission_status_p1 : m_current_mission_status_p2;
 }
 
 void Player::InitialiseActions()
@@ -244,7 +275,6 @@ bool Player::IsRealTimeAction(Action action)
     case Action::kMoveRight:
     case Action::kMoveUp:
     case Action::kMoveDown:
-    case Action::kBulletFire:
         return true;
     default:
         return false;

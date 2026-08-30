@@ -4,6 +4,8 @@ enum class ReceiverCategories
 	kNone = 0,
 	kScene = 1 << 0,
 	kPlayerAircraft = 1 << 1,
+	kPlayer1Aircraft = 1 << 9,  // Player 1 specific
+	kPlayer2Aircraft = 1 << 10, // Player 2 specific
 	kAlliedAircraft = 1 << 2,
 	kEnemyAircraft = 1 << 3,
 	kAlliedProjectile = 1 << 4,

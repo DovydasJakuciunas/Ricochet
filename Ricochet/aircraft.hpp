@@ -6,6 +6,7 @@
 #include "projectile_type.hpp"
 #include "command_queue.hpp"
 #include "animation.hpp"
+#include "player.hpp"
 #include <memory>
 #include <SFML/Window/Keyboard.hpp>
 
@@ -15,7 +16,7 @@ class MovementController;
 class Aircraft : public Entity
 {
 public:
-	Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts);
+	Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts, PlayerID player_id = PlayerID::kPlayer1);
 	~Aircraft();
 	unsigned int GetCategory() const override;
 
@@ -53,6 +54,10 @@ public:
 	void AlignVelocityToRotation();
 	void AlignRotationToDirection();
 
+	// Player ID accessors
+	PlayerID GetPlayerID() const;
+	void SetPlayerID(PlayerID player_id);
+
 	// For subsystem access
 	friend class WeaponSystem;
 	friend class MovementController;
@@ -78,6 +83,9 @@ private:
 	bool m_is_marked_for_removal;
 	bool m_show_explosion;
 	bool m_explosion_began;
+
+	// Player identification
+	PlayerID m_player_id;
 
 	// Subsystems
 	std::unique_ptr<WeaponSystem> m_weapon_system;

@@ -3,13 +3,14 @@
 #include "utility.hpp"
 #include "emitter_node.hpp"
 #include "particletype.hpp"
+#include "constants.hpp"
 
 namespace
 {
     const std::vector<ProjectileData> Table = InitializeProjectileData();
 }
 
-Projectile::Projectile(ProjectileType type, const TextureHolder& textures) : Entity(1), m_type(type), m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect), m_bounce_count(0)
+Projectile::Projectile(ProjectileType type, const TextureHolder& textures) : Entity(1), m_type(type), m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect), m_bounce_count(0), m_owner_player_id(PlayerID::kPlayer1)
 {
     Utility::CentreOrigin(m_sprite);
 
@@ -88,7 +89,19 @@ void Projectile::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 
 void Projectile::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
-    target.draw(m_sprite, states);
+    sf::Sprite sprite = m_sprite;
+
+    // Apply player-specific color
+    if (m_owner_player_id == PlayerID::kPlayer1)
+    {
+        sprite.setColor(kPlayer1Color);
+    }
+    else if (m_owner_player_id == PlayerID::kPlayer2)
+    {
+        sprite.setColor(kPlayer2Color);
+    }
+
+    target.draw(sprite, states);
 }
 
 void Projectile::IncrementBounceCount()
@@ -99,4 +112,14 @@ void Projectile::IncrementBounceCount()
 bool Projectile::HasExceededBounceLimit() const
 {
     return m_bounce_count >= kMaxBounces;
+}
+
+void Projectile::SetOwnerPlayerID(PlayerID player_id)
+{
+    m_owner_player_id = player_id;
+}
+
+PlayerID Projectile::GetOwnerPlayerID() const
+{
+    return m_owner_player_id;
 }

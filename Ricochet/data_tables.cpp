@@ -18,11 +18,12 @@ std::vector<AircraftData> InitializeAircraftData()
 	data[static_cast<int>(AircraftType::kEagle)].m_texture_rect = sf::IntRect({ 0, 0 }, { 48, 64 });
 	data[static_cast<int>(AircraftType::kEagle)].m_has_roll_animation = true;
 
-	data[static_cast<int>(AircraftType::kRaptor)].m_hitpoints = 20;
-	data[static_cast<int>(AircraftType::kRaptor)].m_speed = 80.f;
-	data[static_cast<int>(AircraftType::kRaptor)].m_fire_interval = sf::Time::Zero;
+	data[static_cast<int>(AircraftType::kRaptor)].m_hitpoints = 100;
+	data[static_cast<int>(AircraftType::kRaptor)].m_speed = 225.f;
+	data[static_cast<int>(AircraftType::kRaptor)].m_fire_interval = sf::seconds(1);
 	data[static_cast<int>(AircraftType::kRaptor)].m_texture = TextureID::kEntities;
 	data[static_cast<int>(AircraftType::kRaptor)].m_texture_rect = sf::IntRect({ 144, 0 }, { 84, 64 });
+	data[static_cast<int>(AircraftType::kRaptor)].m_has_roll_animation = true;
 
 	data[static_cast<int>(AircraftType::kRaptor)].m_directions.emplace_back(Direction(+45.f, 80.f));
 	data[static_cast<int>(AircraftType::kRaptor)].m_directions.emplace_back(Direction(-45.f, 160.f));

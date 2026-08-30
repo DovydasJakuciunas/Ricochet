@@ -137,7 +137,10 @@ void WeaponSystem::CheckProjectileLaunch(sf::Time dt, CommandQueue& commands)
 
 bool WeaponSystem::IsAllied() const
 {
-	return m_aircraft->m_type == AircraftType::kEagle;
+	// For PvP, both players are allies with their own projectiles
+	// In the future, this could be based on team/player ID if needed
+	// For now, treat all player aircraft as allied
+	return m_aircraft->GetPlayerID() == PlayerID::kPlayer1 || m_aircraft->GetPlayerID() == PlayerID::kPlayer2;
 }
 
 void WeaponSystem::CreateBullet(SceneNode& node, const TextureHolder& textures)
@@ -192,6 +195,7 @@ void WeaponSystem::CreateProjectile(SceneNode& node, ProjectileType type, float 
 
 		projectile->setPosition(spawnPosition);
 		projectile->SetVelocity(velocity);
+		projectile->SetOwnerPlayerID(m_aircraft->GetPlayerID());
 		node.AttachChild(std::move(projectile));
 		m_is_launching_missile = false;
 	}

@@ -21,7 +21,9 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_scene_layers()
 	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, m_camera.getSize().y))
 	, m_spawn_position(Utility::RandomFloat(0.f, m_camera.getSize().x), Utility::RandomFloat(0.f, m_camera.getSize().y))
+	, m_spawn_position_p2(sf::Vector2f(0.f, 0.f))
 	, m_player_aircraft(nullptr)
+	, m_player_aircraft_p2(nullptr)
 	, m_pickup_spawn_timer(sf::seconds(0.f))
 {
 	m_scene_texture.resize({ m_target.getSize().x, m_target.getSize().y });
@@ -111,10 +113,23 @@ void World::BuildScene()
 	m_background_sprite = background_sprite.get();
 	m_scene_layers[static_cast<int>(SceneLayers::kBackground)]->AttachChild(std::move(background_sprite));
 
-	std::unique_ptr<Aircraft> leader(new Aircraft(AircraftType::kEagle, m_textures, m_fonts));
+	std::unique_ptr<Aircraft> leader(new Aircraft(AircraftType::kEagle, m_textures, m_fonts, PlayerID::kPlayer1));
 	m_player_aircraft = leader.get();
 	m_player_aircraft->setPosition(m_spawn_position);
 	m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(leader));
+
+	// Spawn Player 2 at opposite side of the map
+	// Mirror the spawn position: if P1 is at (x, y), P2 spawns at (width - x, height - y)
+	m_spawn_position_p2 = sf::Vector2f(
+		m_world_bounds.position.x + m_world_bounds.size.x - m_spawn_position.x,
+		m_world_bounds.position.y + m_world_bounds.size.y - m_spawn_position.y
+	);
+
+	std::unique_ptr<Aircraft> player2(new Aircraft(AircraftType::kEagle, m_textures, m_fonts, PlayerID::kPlayer2));
+	m_player_aircraft_p2 = player2.get();
+	m_player_aircraft_p2->setPosition(m_spawn_position_p2);
+	m_player_aircraft_p2->rotate(sf::degrees(180.f));  // Face opposite direction
+	m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(player2));
 
 	//Add the particle nodes to the scene
 	std::unique_ptr<ParticleNode> smokeNode(new ParticleNode(ParticleType::kSmoke, m_textures));
@@ -139,42 +154,87 @@ void World::HandlePlayerBoundaryCollision()
 	sf::FloatRect view_bounds(m_camera.getCenter() - m_camera.getSize() / 2.f, m_camera.getSize());
 	const float border_distance = 40.f;
 
-	sf::Vector2f position = m_player_aircraft->getPosition();
-	sf::FloatRect player_bounds = m_player_aircraft->GetBoundingRect();
+	// Handle Player 1 collision
+	if (m_player_aircraft)
+	{
+		sf::Vector2f position = m_player_aircraft->getPosition();
+		sf::FloatRect player_bounds = m_player_aircraft->GetBoundingRect();
 
-	// Keep player within bounds (invert velocity and rotation on wall collision)
-	if (player_bounds.position.x <= view_bounds.position.x + border_distance)
-	{
-		// Hit left boundary - invert X velocity and rotation
-		position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
-		m_player_aircraft->InvertVelocityX();
-		m_player_aircraft->InvertRotation();
-	}
-	else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
-	{
-		// Hit right boundary - invert X velocity and rotation
-		position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
-		m_player_aircraft->InvertVelocityX();
-		m_player_aircraft->InvertRotation();
+		// Keep player within bounds (invert velocity and rotation on wall collision)
+		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
+		{
+			// Hit left boundary - invert X velocity and rotation
+			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
+			m_player_aircraft->InvertVelocityX();
+			m_player_aircraft->InvertRotation();
+		}
+		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
+		{
+			// Hit right boundary - invert X velocity and rotation
+			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
+			m_player_aircraft->InvertVelocityX();
+			m_player_aircraft->InvertRotation();
+		}
+
+		// Keep player within bounds vertically
+		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
+		{
+			// Hit top boundary - invert Y velocity and rotation
+			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
+			m_player_aircraft->InvertVelocityY();
+			m_player_aircraft->InvertRotation();
+		}
+		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
+		{
+			// Hit bottom boundary - invert Y velocity and rotation
+			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
+			m_player_aircraft->InvertVelocityY();
+			m_player_aircraft->InvertRotation();
+		}
+
+		m_player_aircraft->setPosition(position);
 	}
 
-	// Keep player within bounds vertically
-	if (player_bounds.position.y <= view_bounds.position.y + border_distance)
+	// Handle Player 2 collision (same logic)
+	if (m_player_aircraft_p2)
 	{
-		// Hit top boundary - invert Y velocity and rotation
-		position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
-		m_player_aircraft->InvertVelocityY();
-		m_player_aircraft->InvertRotation();
-	}
-	else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
-	{
-		// Hit bottom boundary - invert Y velocity and rotation
-		position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
-		m_player_aircraft->InvertVelocityY();
-		m_player_aircraft->InvertRotation();
-	}
+		sf::Vector2f position = m_player_aircraft_p2->getPosition();
+		sf::FloatRect player_bounds = m_player_aircraft_p2->GetBoundingRect();
 
-	m_player_aircraft->setPosition(position);
+		// Keep player within bounds (invert velocity and rotation on wall collision)
+		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
+		{
+			// Hit left boundary - invert X velocity and rotation
+			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
+			m_player_aircraft_p2->InvertVelocityX();
+			m_player_aircraft_p2->InvertRotation();
+		}
+		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
+		{
+			// Hit right boundary - invert X velocity and rotation
+			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
+			m_player_aircraft_p2->InvertVelocityX();
+			m_player_aircraft_p2->InvertRotation();
+		}
+
+		// Keep player within bounds vertically
+		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
+		{
+			// Hit top boundary - invert Y velocity and rotation
+			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
+			m_player_aircraft_p2->InvertVelocityY();
+			m_player_aircraft_p2->InvertRotation();
+		}
+		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
+		{
+			// Hit bottom boundary - invert Y velocity and rotation
+			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
+			m_player_aircraft_p2->InvertVelocityY();
+			m_player_aircraft_p2->InvertRotation();
+		}
+
+		m_player_aircraft_p2->setPosition(position);
+	}
 }
 
 sf::FloatRect World::GetViewBounds() const

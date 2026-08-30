@@ -30,7 +30,7 @@ TextureID ToTextureID(AircraftType type)
 	return TextureID::kEagle;
 }
 
-Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts)
+Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontHolder& fonts, PlayerID player_id)
 	: Entity(Table[static_cast<int>(type)].m_hitpoints)
 	, m_type(type)
 	, m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect)
@@ -42,6 +42,7 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	, m_show_explosion(true)
 	, m_explosion(textures.Get(TextureID::kExplosion))
 	, m_explosion_began(false)
+	, m_player_id(player_id)
 	, m_weapon_system(std::make_unique<WeaponSystem>(this, textures))
 	, m_movement_controller(std::make_unique<MovementController>(this))
 {
@@ -56,7 +57,8 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	m_health_display = health_display.get();
 	AttachChild(std::move(health_display));
 
-	if (Aircraft::GetCategory() == static_cast<int>(ReceiverCategories::kPlayerAircraft))
+	// Both player 1 and player 2 should have missile display
+	if (m_player_id == PlayerID::kPlayer1 || m_player_id == PlayerID::kPlayer2)
 	{
 		std::string* missile_ammo = new std::string("");
 		std::unique_ptr<TextNode> missile_display(new TextNode(fonts, *missile_ammo));
@@ -72,11 +74,12 @@ Aircraft::~Aircraft()
 
 unsigned int Aircraft::GetCategory() const
 {
-	if (IsAllied())
+	// Return category based on player ID
+	if (m_player_id == PlayerID::kPlayer1)
 	{
-		return static_cast<unsigned int>(ReceiverCategories::kPlayerAircraft);
+		return static_cast<unsigned int>(ReceiverCategories::kPlayer1Aircraft);
 	}
-	return static_cast<unsigned int>(ReceiverCategories::kEnemyAircraft);
+	return static_cast<unsigned int>(ReceiverCategories::kPlayer2Aircraft);
 }
 
 void Aircraft::IncreaseFireRate()
@@ -102,7 +105,8 @@ void Aircraft::UpdateTexts()
 
 	if (m_missile_display)
 	{
-		m_missile_display->setPosition(sf::Vector2f(0.f, 70.f));
+		m_missile_display->setPosition(sf::Vector2f(0.f, 65.f));
+		m_missile_display->setRotation(-getRotation());
 		if (m_weapon_system->GetMissileAmmo() == 0)
 		{
 			m_missile_display->SetString("");
@@ -167,7 +171,26 @@ void Aircraft::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) co
 	}
 	else
 	{
-		target.draw(m_sprite, states);
+		// Apply color tint based on player ID
+		if (m_player_id == PlayerID::kPlayer1)
+		{
+			// Player 1: Blue tint
+			sf::Sprite blueSpriteVersion = m_sprite;
+			blueSpriteVersion.setColor(kPlayer1Color);
+			target.draw(blueSpriteVersion, states);
+		}
+		else if (m_player_id == PlayerID::kPlayer2)
+		{
+			// Player 2: Red tint
+			sf::Sprite redSpriteVersion = m_sprite;
+			redSpriteVersion.setColor(kPlayer2Color);
+			target.draw(redSpriteVersion, states);
+		}
+		else
+		{
+			// Default: white (no tint)
+			target.draw(m_sprite, states);
+		}
 	}
 }
 
@@ -207,9 +230,26 @@ void Aircraft::UpdateRollAnimation()
 	{
 		sf::IntRect textureRect = Table[static_cast<int>(m_type)].m_texture_rect;
 
-		// Check which directional key is being pressed (A for left, D for right)
-		bool is_left_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A);
-		bool is_right_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D);
+		// Check which directional keys are being pressed based on player ID
+		bool is_left_pressed, is_right_pressed;
+
+		if (m_player_id == PlayerID::kPlayer1)
+		{
+			// Player 1: A and D keys
+			is_left_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A);
+			is_right_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D);
+		}
+		else if (m_player_id == PlayerID::kPlayer2)
+		{
+			// Player 2: Left and Right arrow keys
+			is_left_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Left);
+			is_right_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Right);
+		}
+		else
+		{
+			is_left_pressed = false;
+			is_right_pressed = false;
+		}
 
 		// Roll animation based on key input
 		if (is_left_pressed)
@@ -289,4 +329,14 @@ void Aircraft::AlignVelocityToRotation()
 void Aircraft::AlignRotationToDirection()
 {
 	m_movement_controller->AlignRotationToDirection();
+}
+
+PlayerID Aircraft::GetPlayerID() const
+{
+	return m_player_id;
+}
+
+void Aircraft::SetPlayerID(PlayerID player_id)
+{
+	m_player_id = player_id;
 }
