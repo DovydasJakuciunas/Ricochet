@@ -66,4 +66,11 @@
   - I intend to use UDP primarily for the server's world state heartbeat. Such as Aircraft X/Y position.
   - If one of the snapshots contains a projectile that's lost, retransmitting that old snapshot may no longer be useful because the projectile may already have moved to another location.
   - Preventing older UDP packets form overwriting newer information, each snapshot can ignore any packet older than the newest snapshot it has already processed.
-  
+  # References 
+  - Free To Use. (n.d.). Enjoy by Pufino. [online] Available at: https://freetouse.com/music/pufino/enjoy [Accessed 30 Aug. 2026].
+  - Free To Use. (n.d.). Ruby by massobeats. [online] Available at: https://freetouse.com/music/massobeats/ruby [Accessed 30 Aug. 2026].
+  - Pinterest. (n.d.). Pinterest Image Pin. [online] Available at: https://ie.pinterest.com/pin/844493674860644/ [Accessed 30 Aug. 2026].
+  - Pixabay. (2026). Gun Shot 2 by EAGLAXLE. [online] Available at: https://pixabay.com/sound-effects/film-special-effects-gun-shot-2-530789/ [Accessed 30 Aug. 2026].
+  - Pixabay. (2026). ImmersiveControl Button Click Sound by DenielCZ. [online] Available at: https://pixabay.com/sound-effects/immersivecontrol-button-click-sound-463065/ [Accessed 30 Aug. 2026].
+  - Pixabay. (2025). Drop or Pickup Item (3) by Yodguard. [online] Available at: https://pixabay.com/sound-effects/film-special-effects-drop-or-pickup-item-3-387914/ [Accessed 30 Aug. 2026].
+  - Pixabay. (2025). Rocket Launcher. [online] Available at: https://pixabay.com/sound-effects/film-special-effects-rocket-launcher-307512/ [Accessed 30 Aug. 2026].
