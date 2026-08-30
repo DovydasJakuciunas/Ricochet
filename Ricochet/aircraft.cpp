@@ -348,6 +348,11 @@ void Aircraft::SetPlayerID(PlayerID player_id)
 	m_player_id = player_id;
 }
 
+AircraftType Aircraft::GetAircraftType() const
+{
+	return m_type;
+}
+
 void Aircraft::SetCollisionImmunity(sf::Time duration)
 {
 	m_collision_immunity_remaining = duration;

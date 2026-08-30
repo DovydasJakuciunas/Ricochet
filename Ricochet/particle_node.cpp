@@ -12,7 +12,7 @@ ParticleNode::ParticleNode(ParticleType type, const TextureHolder& textures)
 	: SceneNode()
 	, m_texture(textures.Get(TextureID::kParticle))
 	, m_type(type)
-	, m_vertex_array(sf::PrimitiveType::TriangleStrip)
+	, m_vertex_array(sf::PrimitiveType::Triangles)
 	, m_needs_vertex_update(true)
 {
 }
@@ -95,12 +95,14 @@ void ParticleNode::ComputeVertices() const
 		float ratio = particle.m_lifetime.asSeconds() / Table[static_cast<int>(m_type)].m_lifetime.asSeconds();
 		color.a = static_cast<std::uint8_t>(255 * std::max(ratio, 0.f));
 
+		// First triangle
 		AddVertex(pos.x - half.x, pos.y - half.y, 0.f, 0.f, color);
 		AddVertex(pos.x + half.x, pos.y - half.y, size.x, 0.f, color);
 		AddVertex(pos.x + half.x, pos.y + half.y, size.x, size.y, color);
+
+		// Second triangle
+		AddVertex(pos.x - half.x, pos.y - half.y, 0.f, 0.f, color);
+		AddVertex(pos.x + half.x, pos.y + half.y, size.x, size.y, color);
 		AddVertex(pos.x - half.x, pos.y + half.y, 0.f, size.y, color);
-
-
-
 	}
 }

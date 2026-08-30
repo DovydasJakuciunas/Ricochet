@@ -29,6 +29,7 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_player_aircraft_p2(nullptr)
 	, m_player1_kill_display(nullptr)
 	, m_player2_kill_display(nullptr)
+	, m_tracked_opponent(nullptr)
 	, m_pickup_spawn_timer(sf::seconds(0.f))
 	, m_collision_handler(nullptr)
 	, m_gameplay_manager(nullptr)
@@ -43,6 +44,7 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 void World::Update(sf::Time dt)
 {
 	GuideMissiles();
+	TrackPlayers();
 
 	//UpdateSounds();
 
@@ -158,6 +160,11 @@ void World::IncrementPlayer2Kills()
 	}
 }
 
+Aircraft* World::GetTrackedOpponent() const
+{
+	return m_tracked_opponent;
+}
+
 void World::LoadTextures()
 {
 	m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
@@ -235,11 +242,13 @@ void World::KillGUI()
 	m_player1_kill_display = std::make_unique<TextNode>(m_fonts, *p1_kill_text);
 	m_player1_kill_display->setPosition(sf::Vector2f(90.f, 30.f));
 	m_player1_kill_display->setScale(sf::Vector2f(2.f, 2.f));
+	m_player1_kill_display->SetColor(sf::Color::Blue);  // Player 1 - Blue
 
 	std::string* p2_kill_text = new std::string("P2 Kills: 0");
 	m_player2_kill_display = std::make_unique<TextNode>(m_fonts, *p2_kill_text);
-	m_player2_kill_display->setPosition(sf::Vector2f(m_target.getSize().x - 70.f, 30.f));
+	m_player2_kill_display->setPosition(sf::Vector2f(m_target.getSize().x - 90.f, 30.f));
 	m_player2_kill_display->setScale(sf::Vector2f(2.f, 2.f));
+	m_player2_kill_display->SetColor(sf::Color::Red);  // Player 2 - Red
 }
 
 void World::GuideMissiles()
@@ -285,6 +294,25 @@ void World::GuideMissiles()
 	//m_command_queue.Push(enemyCollector);
 	//m_command_queue.Push(missileGuider);
 	//m_active_enemies.clear();
+}
+
+void World::TrackPlayers()
+{
+	// Reset tracking
+	m_tracked_opponent = nullptr;
+
+	// Track kEagle aircraft that isn't destroyed
+	Command eagleTracker;
+	eagleTracker.category = static_cast<int>(ReceiverCategories::kPlayerAircraft);
+	eagleTracker.action = DerivedAction<Aircraft>([this](Aircraft& aircraft, sf::Time)
+	{
+		// Only track kEagle aircraft that aren't destroyed
+		if (aircraft.GetAircraftType() == AircraftType::kEagle && !aircraft.IsDestroyed())
+		{
+			m_tracked_opponent = &aircraft;
+		}
+	});
+	m_command_queue.Push(eagleTracker);
 }
 
 void World::UpdateSounds()

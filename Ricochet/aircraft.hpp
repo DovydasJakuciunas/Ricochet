@@ -58,6 +58,9 @@ public:
 	PlayerID GetPlayerID() const;
 	void SetPlayerID(PlayerID player_id);
 
+	// Get aircraft type
+	AircraftType GetAircraftType() const;
+
 	// Collision immunity grace period
 	void SetCollisionImmunity(sf::Time duration);
 	bool IsCollisionImmune() const;

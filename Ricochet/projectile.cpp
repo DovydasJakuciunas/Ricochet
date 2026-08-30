@@ -25,6 +25,13 @@ Projectile::Projectile(ProjectileType type, const TextureHolder& textures) : Ent
         propellant->setPosition(sf::Vector2f(0.f, GetBoundingRect().size.y / 2.f));
         AttachChild(std::move(propellant));
     }
+    else
+    {
+        // Add small smoke trail for bullets
+        std::unique_ptr<EmitterNode> smoke(new EmitterNode(ParticleType::kSmoke));
+        smoke->setPosition(sf::Vector2f(0.f, GetBoundingRect().size.y / 2.f));
+        AttachChild(std::move(smoke));
+    }
 }
 
 void Projectile::GuideTowards(sf::Vector2f position)

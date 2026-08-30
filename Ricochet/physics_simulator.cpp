@@ -4,6 +4,7 @@
 #include "entity.hpp"
 #include "action.hpp"
 #include "receiver_categories.hpp"
+#include "projectile.hpp"
 #include <cmath>
 
 PhysicsSimulator::PhysicsSimulator(const sf::FloatRect& world_bounds, const sf::View& camera)
@@ -37,37 +38,39 @@ void PhysicsSimulator::HandlePlayerBoundaryCollision(Aircraft* player1, Aircraft
 	{
 		sf::Vector2f position = player1->getPosition();
 		sf::FloatRect player_bounds = player1->GetBoundingRect();
+		bool hit_vertical_wall = false;
+		bool hit_horizontal_wall = false;
 
-		// Keep player within bounds (invert velocity and rotation on wall collision)
+		// Keep player within bounds (reflect velocity for ricochet effect)
 		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
 		{
-			// Hit left boundary - invert X velocity and rotation
+			// Hit left boundary - reflect X velocity for ricochet
 			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
 			player1->InvertVelocityX();
-			player1->InvertRotation();
+			hit_vertical_wall = true;
 		}
 		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
 		{
-			// Hit right boundary - invert X velocity and rotation
+			// Hit right boundary - reflect X velocity for ricochet
 			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
 			player1->InvertVelocityX();
-			player1->InvertRotation();
+			hit_vertical_wall = true;
 		}
 
 		// Keep player within bounds vertically
 		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
 		{
-			// Hit top boundary - invert Y velocity and rotation
+			// Hit top boundary - reflect Y velocity for ricochet
 			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
 			player1->InvertVelocityY();
-			player1->InvertRotation();
+			hit_horizontal_wall = true;
 		}
 		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
 		{
-			// Hit bottom boundary - invert Y velocity and rotation
+			// Hit bottom boundary - reflect Y velocity for ricochet
 			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
 			player1->InvertVelocityY();
-			player1->InvertRotation();
+			hit_horizontal_wall = true;
 		}
 
 		player1->setPosition(position);
@@ -78,37 +81,39 @@ void PhysicsSimulator::HandlePlayerBoundaryCollision(Aircraft* player1, Aircraft
 	{
 		sf::Vector2f position = player2->getPosition();
 		sf::FloatRect player_bounds = player2->GetBoundingRect();
+		bool hit_vertical_wall = false;
+		bool hit_horizontal_wall = false;
 
-		// Keep player within bounds (invert velocity and rotation on wall collision)
+		// Keep player within bounds (reflect velocity for ricochet effect)
 		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
 		{
-			// Hit left boundary - invert X velocity and rotation
+			// Hit left boundary - reflect X velocity for ricochet
 			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
 			player2->InvertVelocityX();
-			player2->InvertRotation();
+			hit_vertical_wall = true;
 		}
 		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
 		{
-			// Hit right boundary - invert X velocity and rotation
+			// Hit right boundary - reflect X velocity for ricochet
 			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
 			player2->InvertVelocityX();
-			player2->InvertRotation();
+			hit_vertical_wall = true;
 		}
 
 		// Keep player within bounds vertically
 		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
 		{
-			// Hit top boundary - invert Y velocity and rotation
+			// Hit top boundary - reflect Y velocity for ricochet
 			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
 			player2->InvertVelocityY();
-			player2->InvertRotation();
+			hit_horizontal_wall = true;
 		}
 		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
 		{
-			// Hit bottom boundary - invert Y velocity and rotation
+			// Hit bottom boundary - reflect Y velocity for ricochet
 			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
 			player2->InvertVelocityY();
-			player2->InvertRotation();
+			hit_horizontal_wall = true;
 		}
 
 		player2->setPosition(position);
@@ -182,5 +187,16 @@ void PhysicsSimulator::BounceEntity(SceneNode* entity)
 	{
 		moving_entity->SetVelocity(velocity);
 		entity->setPosition(position);
+
+		// Track bounces for projectiles and destroy if limit exceeded
+		Projectile* projectile = dynamic_cast<Projectile*>(entity);
+		if (projectile)
+		{
+			projectile->IncrementBounceCount();
+			if (projectile->HasExceededBounceLimit())
+			{
+				projectile->Destroy();
+			}
+		}
 	}
 }

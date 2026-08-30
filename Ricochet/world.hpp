@@ -31,6 +31,9 @@ public:
 	void IncrementPlayer1Kills();
 	void IncrementPlayer2Kills();
 
+	// Track opponent
+	Aircraft* GetTrackedOpponent() const;
+
 private:
 	void LoadTextures();
 	void BuildScene();
@@ -38,6 +41,7 @@ private:
 	void KillGUI();
 
 	void GuideMissiles();
+	void TrackPlayers();
 	void UpdateSounds();
 	void SpawnRandomPickups();
 
@@ -59,6 +63,9 @@ private:
 	// Kill count UI
 	std::unique_ptr<TextNode> m_player1_kill_display;
 	std::unique_ptr<TextNode> m_player2_kill_display;
+
+	// Tracked opponent
+	Aircraft* m_tracked_opponent;
 
 	CommandQueue m_command_queue;
 	Command m_command;
