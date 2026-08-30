@@ -1,7 +1,7 @@
 #include "music_player.hpp"
 
 MusicPlayer::MusicPlayer()
-	: m_volume(50.f)
+	: m_volume(24.f)
 {
 	m_filenames[MusicThemes::kMenuTheme] = "Media/Music/MenuTheme.ogg";
 	m_filenames[MusicThemes::kMissionTheme] = "Media/Music/MissionTheme.ogg";
