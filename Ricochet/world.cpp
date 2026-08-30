@@ -24,6 +24,12 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_spawn_position_p2(sf::Vector2f(0.f, 0.f))
 	, m_player_aircraft(nullptr)
 	, m_player_aircraft_p2(nullptr)
+	, m_player1_kills(0)
+	, m_player2_kills(0)
+	, m_player1_was_alive(true)
+	, m_player2_was_alive(true)
+	, m_player1_kill_display(nullptr)
+	, m_player2_kill_display(nullptr)
 	, m_pickup_spawn_timer(sf::seconds(0.f))
 {
 	m_scene_texture.resize({ m_target.getSize().x, m_target.getSize().y });
@@ -45,7 +51,46 @@ void World::Update(sf::Time dt)
 		m_scene_graph.OnCommand(m_command_queue.Pop(), dt);
 	}
 	HandleCollisions();
+
+	// Detect kills BEFORE RemoveWrecks - check if players changed from alive to dead
+	bool player1_alive = m_player_aircraft && !m_player_aircraft->IsMarkedForRemoval();
+	bool player2_alive = m_player_aircraft_p2 && !m_player_aircraft_p2->IsMarkedForRemoval();
+
+	// Player 1 was alive but is now dead - Player 2 gets a kill and Player 1 respawns
+	if (m_player1_was_alive && !player1_alive && m_player_aircraft)
+	{
+		IncrementPlayer2Kills();
+		// Respawn Player 1 BEFORE RemoveWrecks
+		m_player_aircraft->Respawn();
+		m_player_aircraft->setPosition(m_spawn_position);
+		player1_alive = true;
+	}
+
+	// Player 2 was alive but is now dead - Player 1 gets a kill and Player 2 respawns
+	if (m_player2_was_alive && !player2_alive && m_player_aircraft_p2)
+	{
+		IncrementPlayer1Kills();
+		// Respawn Player 2 BEFORE RemoveWrecks
+		m_player_aircraft_p2->Respawn();
+		m_player_aircraft_p2->setPosition(m_spawn_position_p2);
+		player2_alive = true;
+	}
+
+	// Update alive status for next frame
+	m_player1_was_alive = player1_alive;
+	m_player2_was_alive = player2_alive;
+
 	m_scene_graph.RemoveWrecks();
+
+	// Update kill count displays
+	if (m_player1_kill_display)
+	{
+		m_player1_kill_display->SetString("P1 Kills: " + std::to_string(m_player1_kills));
+	}
+	if (m_player2_kill_display)
+	{
+		m_player2_kill_display->SetString("P2 Kills: " + std::to_string(m_player2_kills));
+	}
 
 	m_scene_graph.Update(dt, m_command_queue);
 
@@ -137,6 +182,21 @@ void World::BuildScene()
 
 	std::unique_ptr<ParticleNode> propellantNode(new ParticleNode(ParticleType::kPropellant, m_textures));
 	m_scene_layers[static_cast<int>(SceneLayers::kLowerAir)]->AttachChild(std::move(propellantNode));
+
+	// Create kill count displays
+	std::string* p1_kill_text = new std::string("Kills: 0");
+	std::unique_ptr<TextNode> p1_kill_display(new TextNode(m_fonts, *p1_kill_text));
+	m_player1_kill_display = p1_kill_display.get();
+	m_player1_kill_display->setPosition(sf::Vector2f(20.f, 20.f));
+	m_player1_kill_display->setScale(sf::Vector2f(0.8f, 0.8f));
+	m_scene_graph.AttachChild(std::move(p1_kill_display));
+
+	std::string* p2_kill_text = new std::string("Kills: 0");
+	std::unique_ptr<TextNode> p2_kill_display(new TextNode(m_fonts, *p2_kill_text));
+	m_player2_kill_display = p2_kill_display.get();
+	m_player2_kill_display->setPosition(sf::Vector2f(m_camera.getSize().x - 200.f, 20.f));
+	m_player2_kill_display->setScale(sf::Vector2f(0.8f, 0.8f));
+	m_scene_graph.AttachChild(std::move(p2_kill_display));
 
 	//Add sound effect node
 	std::unique_ptr<SoundNode> soundNode(new SoundNode(m_sounds));
@@ -591,4 +651,24 @@ void World::SpawnRandomPickups()
 
 		m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(pickup));
 	}
+}
+
+int World::GetPlayer1Kills() const
+{
+	return m_player1_kills;
+}
+
+int World::GetPlayer2Kills() const
+{
+	return m_player2_kills;
+}
+
+void World::IncrementPlayer1Kills()
+{
+	m_player1_kills++;
+}
+
+void World::IncrementPlayer2Kills()
+{
+	m_player2_kills++;
 }

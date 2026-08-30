@@ -62,6 +62,9 @@ public:
 	void SetCollisionImmunity(sf::Time duration);
 	bool IsCollisionImmune() const;
 
+	// Respawn method
+	void Respawn();
+
 	// For subsystem access
 	friend class WeaponSystem;
 	friend class MovementController;

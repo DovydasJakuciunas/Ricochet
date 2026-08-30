@@ -18,12 +18,17 @@ bool GameState::Update(sf::Time dt)
 {
 	m_world.Update(dt);
 
-	if (!m_world.HasAlivePlayer())
+	// Check for win condition: first player to reach 3 kills wins
+	if (m_world.GetPlayer1Kills() >= 3)
 	{
-		m_player.SetMissionStatus(MissionStatus::kMissionFailure);
+		m_player.SetMissionStatus(MissionStatus::kMissionSuccess);  // Player 1 wins
 		RequestStackPush(StateID::kGameOver);
 	}
-
+	else if (m_world.GetPlayer2Kills() >= 3)
+	{
+		m_player.SetMissionStatus(MissionStatus::kMissionFailure);  // Player 2 wins
+		RequestStackPush(StateID::kGameOver);
+	}
 
 	CommandQueue& commands = m_world.GetCommandQueue();
 	m_player.HandleRealTimeInput(commands, PlayerID::kPlayer1);

@@ -8,6 +8,7 @@
 #include "bloom_effect.hpp"
 #include "sound_player.hpp"
 #include "sprite_node.hpp"
+#include "text_node.hpp"
 #include "utility.hpp"
 
 class World
@@ -20,6 +21,12 @@ public:
 	CommandQueue& GetCommandQueue();
 
 	bool HasAlivePlayer() const;
+
+	// Kill tracking
+	int GetPlayer1Kills() const;
+	int GetPlayer2Kills() const;
+	void IncrementPlayer1Kills();
+	void IncrementPlayer2Kills();
 
 private:
 	void LoadTextures();
@@ -54,6 +61,16 @@ private:
 	sf::Vector2f m_spawn_position_p2;
 	Aircraft* m_player_aircraft;
 	Aircraft* m_player_aircraft_p2;
+
+	// Kill tracking
+	int m_player1_kills;
+	int m_player2_kills;
+	bool m_player1_was_alive;
+	bool m_player2_was_alive;
+
+	// Kill count UI
+	TextNode* m_player1_kill_display;
+	TextNode* m_player2_kill_display;
 
 	CommandQueue m_command_queue;
 	Command m_command;

@@ -357,3 +357,17 @@ bool Aircraft::IsCollisionImmune() const
 {
 	return m_collision_immunity_remaining > sf::Time::Zero;
 }
+
+void Aircraft::Respawn()
+{
+	// Reset health to full
+	Repair(100);
+	// Reset velocity
+	SetVelocity(0.f, 0.f);
+	// Clear destruction state
+	m_is_marked_for_removal = false;
+	m_show_explosion = true;
+	m_explosion_began = false;
+	// Reset explosion animation
+	m_explosion.Restart();
+}
