@@ -9,7 +9,7 @@ namespace
     const std::vector<ProjectileData> Table = InitializeProjectileData();
 }
 
-Projectile::Projectile(ProjectileType type, const TextureHolder& textures) : Entity(1), m_type(type), m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect)
+Projectile::Projectile(ProjectileType type, const TextureHolder& textures) : Entity(1), m_type(type), m_sprite(textures.Get(Table[static_cast<int>(type)].m_texture), Table[static_cast<int>(type)].m_texture_rect), m_bounce_count(0)
 {
     Utility::CentreOrigin(m_sprite);
 
@@ -89,4 +89,14 @@ void Projectile::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 void Projectile::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
 {
     target.draw(m_sprite, states);
+}
+
+void Projectile::IncrementBounceCount()
+{
+    m_bounce_count++;
+}
+
+bool Projectile::HasExceededBounceLimit() const
+{
+    return m_bounce_count >= kMaxBounces;
 }

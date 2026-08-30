@@ -15,6 +15,8 @@ public:
 
 	float GetMaxSpeed() const;
 	float GetDamage() const;
+	void IncrementBounceCount();
+	bool HasExceededBounceLimit() const;
 
 
 private:
@@ -25,5 +27,7 @@ private:
 	ProjectileType m_type;
 	sf::Sprite m_sprite;
 	sf::Vector2f m_target_direction;
+	int m_bounce_count;
+	
 };
 

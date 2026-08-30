@@ -2,9 +2,7 @@
 #include "texture_id.hpp"
 #include "data_tables.hpp"
 #include "constants.hpp"
-#include "pickup_type.hpp"
 #include "projectile.hpp"
-#include "pickup.hpp"
 #include "projectile_type.hpp"
 #include "sound_node.hpp"
 
@@ -43,7 +41,6 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	, m_fire_countdown(sf::Time::Zero)
 	, m_missile_ammo(2)
 	, m_is_marked_for_removal(false)
-	, m_spawned_pickup(false)
 	, m_show_explosion(true)
 	, m_explosion(textures.Get(TextureID::kExplosion))
 	, m_explosion_began(false)
@@ -67,11 +64,6 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	m_missile_command.action = [this, &textures](SceneNode& node, sf::Time dt)
 		{
 			CreateProjectile(node, ProjectileType::kMissile, 0.f, 0.5f, textures);
-		};
-	m_drop_pickup_command.category = static_cast<int>(ReceiverCategories::kScene);
-	m_drop_pickup_command.action = [this, &textures](SceneNode& node, sf::Time dt)
-		{
-			CreatePickup(node, textures);
 		};
 
 	std::string* health = new std::string("");
@@ -287,7 +279,6 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 {
 	if (IsDestroyed())
 	{
-		CheckPickupDrop(commands);
 		m_explosion.Update(dt);
 		//Play explosion sound only once
 		if (!m_explosion_began)
@@ -340,27 +331,6 @@ void Aircraft::CheckProjectileLaunch(sf::Time dt, CommandQueue& commands)
 bool Aircraft::IsAllied() const
 {
 	return m_type == AircraftType::kEagle;
-}
-
-void Aircraft::CreatePickup(SceneNode& node, const TextureHolder& textures)
-{
-	if (!m_spawned_pickup)
-	{
-		auto type = static_cast<PickupType>(Utility::RandomInt(static_cast<int>(PickupType::kPickupCount)));
-		std::unique_ptr<Pickup> pickup(new Pickup(type, textures));
-		pickup->setPosition(GetWorldPosition());
-		pickup->SetVelocity(0.f, 0.f);
-		node.AttachChild(std::move(pickup));
-	}
-	m_spawned_pickup = true;
-}
-
-void Aircraft::CheckPickupDrop(CommandQueue& commands)
-{
-	if (!IsAllied() && Utility::RandomInt(kPickupDropChance) == 0 && !m_spawned_pickup)
-	{
-		commands.Push(m_drop_pickup_command);
-	}
 }
 
 void Aircraft::UpdateRollAnimation()

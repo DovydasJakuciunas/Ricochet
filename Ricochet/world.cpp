@@ -22,6 +22,7 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 	, m_world_bounds(sf::Vector2f(0.f, 0.f), sf::Vector2f(m_camera.getSize().x, m_camera.getSize().y))
 	, m_spawn_position(Utility::RandomFloat(0.f, m_camera.getSize().x), Utility::RandomFloat(0.f, m_camera.getSize().y))
 	, m_player_aircraft(nullptr)
+	, m_pickup_spawn_timer(sf::seconds(0.f))
 {
 	m_scene_texture.resize({ m_target.getSize().x, m_target.getSize().y });
 	LoadTextures();
@@ -45,6 +46,8 @@ void World::Update(sf::Time dt)
 	m_scene_graph.RemoveWrecks();
 
 	m_scene_graph.Update(dt, m_command_queue);
+
+	SpawnRandomPickups();
 
 	BounceProjectiles();
 	AdaptPlayerPosition();
@@ -328,18 +331,22 @@ void World::BounceEntity(SceneNode* entity)
 	sf::Vector2f velocity = moving_entity->GetVelocity();
 	sf::Vector2f position = entity->getPosition();
 
+	bool bounced = false;
+
 	// Check collision with left and right walls
 	if (bounds.position.x <= m_world_bounds.position.x)
 	{
 		// Hit left wall - bounce back right
 		velocity.x = std::abs(velocity.x);
 		position.x = m_world_bounds.position.x + (bounds.size.x / 2.f);
+		bounced = true;
 	}
 	else if (bounds.position.x + bounds.size.x >= m_world_bounds.position.x + m_world_bounds.size.x)
 	{
 		// Hit right wall - bounce back left
 		velocity.x = -std::abs(velocity.x);
 		position.x = m_world_bounds.position.x + m_world_bounds.size.x - (bounds.size.x / 2.f);
+		bounced = true;
 	}
 
 	// Check collision with top and bottom walls
@@ -348,12 +355,29 @@ void World::BounceEntity(SceneNode* entity)
 		// Hit top wall - bounce down
 		velocity.y = std::abs(velocity.y);
 		position.y = m_world_bounds.position.y + (bounds.size.y / 2.f);
+		bounced = true;
 	}
 	else if (bounds.position.y + bounds.size.y >= m_world_bounds.position.y + m_world_bounds.size.y)
 	{
 		// Hit bottom wall - bounce up
 		velocity.y = -std::abs(velocity.y);
 		position.y = m_world_bounds.position.y + m_world_bounds.size.y - (bounds.size.y / 2.f);
+		bounced = true;
+	}
+
+	// If projectile bounced, increment bounce count and check limit
+	if (bounced)
+	{
+		Projectile* projectile = dynamic_cast<Projectile*>(entity);
+		if (projectile)
+		{
+			projectile->IncrementBounceCount();
+			if (projectile->HasExceededBounceLimit())
+			{
+				projectile->Destroy();
+				return;  // Don't apply velocity if destroying
+			}
+		}
 	}
 
 	// Apply new velocity and position
@@ -361,4 +385,35 @@ void World::BounceEntity(SceneNode* entity)
 	entity->setPosition(position);
 }
 
+void World::SpawnRandomPickups()
+{
+	// Spawn pickups every 3 seconds using a fixed timer
+	m_pickup_spawn_timer -= sf::seconds(1.f / 60.f);  // Assuming 60 FPS
 
+	if (m_pickup_spawn_timer <= sf::seconds(0.f))
+	{
+		m_pickup_spawn_timer = sf::seconds(3.f);  // Reset timer to 3 seconds
+
+		sf::FloatRect view_bounds = GetViewBounds();
+
+		// Add a border margin to keep pickups away from edges
+		const float border = 50.f;
+		sf::FloatRect spawn_area(
+			sf::Vector2f(view_bounds.position.x + border, view_bounds.position.y + border),
+			sf::Vector2f(view_bounds.size.x - (border * 2.f), view_bounds.size.y - (border * 2.f))
+		);
+
+		// Random pickup type
+		PickupType type = static_cast<PickupType>(Utility::RandomInt(static_cast<int>(PickupType::kPickupCount)));
+
+		// Spawn at random position within camera view (with border)
+		float random_x = spawn_area.position.x + Utility::RandomInt(static_cast<int>(spawn_area.size.x));
+		float random_y = spawn_area.position.y + Utility::RandomInt(static_cast<int>(spawn_area.size.y));
+
+		std::unique_ptr<Pickup> pickup(new Pickup(type, m_textures));
+		pickup->setPosition(sf::Vector2f(random_x, random_y));
+		pickup->SetVelocity(0.f, 0.f);
+
+		m_scene_layers[static_cast<int>(SceneLayers::kUpperAir)]->AttachChild(std::move(pickup));
+	}
+}

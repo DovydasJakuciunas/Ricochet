@@ -38,8 +38,7 @@ private:
 
 	void BounceProjectiles();
 	void BounceEntity(SceneNode* entity);
-
-private:
+	void SpawnRandomPickups();
 
 private:
 	sf::RenderTarget& m_target;
@@ -59,5 +58,6 @@ private:
 
 	BloomEffect m_bloom_effect;
 	SpriteNode* m_background_sprite;
+	sf::Time m_pickup_spawn_timer;
 };
 

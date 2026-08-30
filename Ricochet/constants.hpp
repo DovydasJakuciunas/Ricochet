@@ -7,3 +7,4 @@ constexpr auto kMissileRefill = 3;
 constexpr auto kGameOverToMenuPause = 3;
 
 constexpr auto kRotationSpeed = 2.5f;
+constexpr auto kMaxBounces = 2; 
