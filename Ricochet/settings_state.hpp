@@ -16,13 +16,17 @@ public:
 
 private:
 	void UpdateLabels();
-	void AddButtonLabel(Action action, float y, const std::string& text, Context context);
+	void AddButtonLabel(Action action, float y, const std::string& text, Context context, PlayerID player_id = PlayerID::kPlayer1);
 
 private:
 	sf::Sprite m_background_sprite;
 	gui::Container m_gui_container;
-	std::array<gui::Button::Ptr, static_cast<int>(Action::kActionCount)> m_binding_buttons;
-	std::array<gui::Label::Ptr, static_cast<int>(Action::kActionCount)> m_binding_labels;
+	std::array<gui::Button::Ptr, static_cast<int>(Action::kActionCount)> m_binding_buttons_p1;
+	std::array<gui::Label::Ptr, static_cast<int>(Action::kActionCount)> m_binding_labels_p1;
+	std::array<gui::Button::Ptr, static_cast<int>(Action::kActionCount)> m_binding_buttons_p2;
+	std::array<gui::Label::Ptr, static_cast<int>(Action::kActionCount)> m_binding_labels_p2;
+
+	PlayerID m_current_binding_player;
 
 	gui::Button::Ptr m_back_button;
 };

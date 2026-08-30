@@ -160,11 +160,19 @@ void Player::HandleRealTimeInput(CommandQueue& command_queue, PlayerID player_id
 
     bool& was_forward_pressed = (player_id == PlayerID::kPlayer1) ? m_was_forward_pressed_p1 : m_was_forward_pressed_p2;
 
-    // Determine the forward key for each player
-    sf::Keyboard::Scancode forward_key = (player_id == PlayerID::kPlayer1) ? 
-        sf::Keyboard::Scancode::W : sf::Keyboard::Scancode::Up;
+    // Find the forward key by looking up which key is bound to kMoveUp
+    sf::Keyboard::Scancode forward_key = sf::Keyboard::Scancode::Unknown;
+    for (auto pair : key_binding)
+    {
+        if (pair.second == Action::kMoveUp)
+        {
+            forward_key = pair.first;
+            break;
+        }
+    }
 
-    bool is_forward_currently_pressed = sf::Keyboard::isKeyPressed(forward_key);
+    bool is_forward_currently_pressed = (forward_key != sf::Keyboard::Scancode::Unknown) && 
+                                        sf::Keyboard::isKeyPressed(forward_key);
 
     // Determine category for this player
     unsigned int player_category = (player_id == PlayerID::kPlayer1) ?
@@ -298,7 +306,6 @@ bool Player::IsRealTimeAction(Action action)
     case Action::kMoveLeft:
     case Action::kMoveRight:
     case Action::kMoveUp:
-    case Action::kMoveDown:
         return true;
     default:
         return false;
