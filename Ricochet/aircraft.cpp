@@ -43,6 +43,7 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	, m_explosion(textures.Get(TextureID::kExplosion))
 	, m_explosion_began(false)
 	, m_player_id(player_id)
+	, m_collision_immunity_remaining(sf::Time::Zero)
 	, m_weapon_system(std::make_unique<WeaponSystem>(this, textures))
 	, m_movement_controller(std::make_unique<MovementController>(this))
 {
@@ -210,6 +211,12 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 		return;
 	}
 
+	// Decrement collision immunity timer
+	if (m_collision_immunity_remaining > sf::Time::Zero)
+	{
+		m_collision_immunity_remaining -= dt;
+	}
+
 	Entity::UpdateCurrent(dt, commands);
 	UpdateTexts();
 
@@ -339,4 +346,14 @@ PlayerID Aircraft::GetPlayerID() const
 void Aircraft::SetPlayerID(PlayerID player_id)
 {
 	m_player_id = player_id;
+}
+
+void Aircraft::SetCollisionImmunity(sf::Time duration)
+{
+	m_collision_immunity_remaining = duration;
+}
+
+bool Aircraft::IsCollisionImmune() const
+{
+	return m_collision_immunity_remaining > sf::Time::Zero;
 }

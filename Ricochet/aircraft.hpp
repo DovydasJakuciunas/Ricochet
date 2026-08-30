@@ -58,6 +58,10 @@ public:
 	PlayerID GetPlayerID() const;
 	void SetPlayerID(PlayerID player_id);
 
+	// Collision immunity grace period
+	void SetCollisionImmunity(sf::Time duration);
+	bool IsCollisionImmune() const;
+
 	// For subsystem access
 	friend class WeaponSystem;
 	friend class MovementController;
@@ -86,6 +90,9 @@ private:
 
 	// Player identification
 	PlayerID m_player_id;
+
+	// Collision immunity grace period
+	sf::Time m_collision_immunity_remaining;
 
 	// Subsystems
 	std::unique_ptr<WeaponSystem> m_weapon_system;
