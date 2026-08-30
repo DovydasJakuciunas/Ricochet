@@ -7,6 +7,7 @@
 #include "command_queue.hpp"
 #include "animation.hpp"
 #include <memory>
+#include <SFML/Window/Keyboard.hpp>
 
 class WeaponSystem;
 class MovementController;

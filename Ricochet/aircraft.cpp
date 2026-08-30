@@ -6,7 +6,6 @@
 #include "constants.hpp"
 #include "utility.hpp"
 
-
 namespace
 {
 	const std::vector<AircraftData> Table = InitializeAircraftData();
@@ -208,17 +207,22 @@ void Aircraft::UpdateRollAnimation()
 	{
 		sf::IntRect textureRect = Table[static_cast<int>(m_type)].m_texture_rect;
 
-		//Roll left: Texture rect is offset once
-		if (GetVelocity().x < 0.f)
-		{
-			textureRect.position.x += textureRect.size.x;
-		}
-		else if (GetVelocity().x > 0.f)
-		{
-			textureRect.position.x += 2 * textureRect.size.x;
-		}
-		m_sprite.setTextureRect(textureRect);
+		// Check which directional key is being pressed (A for left, D for right)
+		bool is_left_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A);
+		bool is_right_pressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D);
 
+		// Roll animation based on key input
+		if (is_left_pressed)
+		{
+			textureRect.position.x += textureRect.size.x;  // Roll left
+		}
+		else if (is_right_pressed)
+		{
+			textureRect.position.x += 2 * textureRect.size.x;  // Roll right
+		}
+		// No tilt: straight when neither key is pressed
+
+		m_sprite.setTextureRect(textureRect);
 	}
 }
 
