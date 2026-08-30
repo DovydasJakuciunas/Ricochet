@@ -25,6 +25,7 @@ private:
 	sf::FloatRect m_world_bounds;
 	sf::View m_camera;
 
-	// Helper to bounce a single entity
+	// Helper methods
 	void BounceEntityInternal(SceneNode* entity);
+	void BounceAircraftOffWall(Aircraft* aircraft);
 };

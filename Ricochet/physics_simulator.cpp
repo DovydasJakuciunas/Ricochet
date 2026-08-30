@@ -29,94 +29,110 @@ sf::FloatRect PhysicsSimulator::GetBattleFieldBounds() const
 
 void PhysicsSimulator::HandlePlayerBoundaryCollision(Aircraft* player1, Aircraft* player2)
 {
-	// Keep player within the camera view bounds with a border
-	sf::FloatRect view_bounds = GetViewBounds();
-	const float border_distance = 40.f;
-
-	// Handle Player 1 collision
 	if (player1)
 	{
-		sf::Vector2f position = player1->getPosition();
-		sf::FloatRect player_bounds = player1->GetBoundingRect();
-		bool hit_vertical_wall = false;
-		bool hit_horizontal_wall = false;
-
-		// Keep player within bounds (reflect velocity for ricochet effect)
-		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
-		{
-			// Hit left boundary - reflect X velocity for ricochet
-			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
-			player1->InvertVelocityX();
-			hit_vertical_wall = true;
-		}
-		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
-		{
-			// Hit right boundary - reflect X velocity for ricochet
-			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
-			player1->InvertVelocityX();
-			hit_vertical_wall = true;
-		}
-
-		// Keep player within bounds vertically
-		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
-		{
-			// Hit top boundary - reflect Y velocity for ricochet
-			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
-			player1->InvertVelocityY();
-			hit_horizontal_wall = true;
-		}
-		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
-		{
-			// Hit bottom boundary - reflect Y velocity for ricochet
-			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
-			player1->InvertVelocityY();
-			hit_horizontal_wall = true;
-		}
-
-		player1->setPosition(position);
+		BounceAircraftOffWall(player1);
 	}
 
-	// Handle Player 2 collision (same logic)
 	if (player2)
 	{
-		sf::Vector2f position = player2->getPosition();
-		sf::FloatRect player_bounds = player2->GetBoundingRect();
-		bool hit_vertical_wall = false;
-		bool hit_horizontal_wall = false;
+		BounceAircraftOffWall(player2);
+	}
+}
 
-		// Keep player within bounds (reflect velocity for ricochet effect)
-		if (player_bounds.position.x <= view_bounds.position.x + border_distance)
-		{
-			// Hit left boundary - reflect X velocity for ricochet
-			position.x = view_bounds.position.x + border_distance + (player_bounds.size.x / 2.f);
-			player2->InvertVelocityX();
-			hit_vertical_wall = true;
-		}
-		else if (player_bounds.position.x + player_bounds.size.x >= view_bounds.position.x + view_bounds.size.x - border_distance)
-		{
-			// Hit right boundary - reflect X velocity for ricochet
-			position.x = view_bounds.position.x + view_bounds.size.x - border_distance - (player_bounds.size.x / 2.f);
-			player2->InvertVelocityX();
-			hit_vertical_wall = true;
-		}
+void PhysicsSimulator::BounceAircraftOffWall(Aircraft* aircraft)
+{
+	const sf::Time kWallBounceGracePeriod = sf::milliseconds(250);
+	const float bounce_force = 500.f;
 
-		// Keep player within bounds vertically
-		if (player_bounds.position.y <= view_bounds.position.y + border_distance)
-		{
-			// Hit top boundary - reflect Y velocity for ricochet
-			position.y = view_bounds.position.y + border_distance + (player_bounds.size.y / 2.f);
-			player2->InvertVelocityY();
-			hit_horizontal_wall = true;
-		}
-		else if (player_bounds.position.y + player_bounds.size.y >= view_bounds.position.y + view_bounds.size.y - border_distance)
-		{
-			// Hit bottom boundary - reflect Y velocity for ricochet
-			position.y = view_bounds.position.y + view_bounds.size.y - border_distance - (player_bounds.size.y / 2.f);
-			player2->InvertVelocityY();
-			hit_horizontal_wall = true;
-		}
+	sf::Vector2f position = aircraft->getPosition();
+	sf::Vector2f velocity = aircraft->GetVelocity();
+	sf::FloatRect aircraft_bounds = aircraft->GetBoundingRect();
 
-		player2->setPosition(position);
+	bool bounced = false;
+
+	// Check left boundary
+	if (aircraft_bounds.position.x <= m_world_bounds.position.x)
+	{
+		position.x = m_world_bounds.position.x + (aircraft_bounds.size.x / 2.f);
+		float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+		velocity.x = -velocity.x;
+		if (speed > 0.f)
+		{
+			velocity = (velocity / speed) * bounce_force;
+		}
+		else
+		{
+			velocity = sf::Vector2f(bounce_force, 0.f);
+		}
+		aircraft->SetVelocity(velocity);
+		float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159f + 90.f;
+		aircraft->setRotation(sf::degrees(angle));
+		bounced = true;
+	}
+	// Check right boundary
+	else if (aircraft_bounds.position.x + aircraft_bounds.size.x >= m_world_bounds.position.x + m_world_bounds.size.x)
+	{
+		position.x = m_world_bounds.position.x + m_world_bounds.size.x - (aircraft_bounds.size.x / 2.f);
+		float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+		velocity.x = -velocity.x;
+		if (speed > 0.f)
+		{
+			velocity = (velocity / speed) * bounce_force;
+		}
+		else
+		{
+			velocity = sf::Vector2f(-bounce_force, 0.f);
+		}
+		aircraft->SetVelocity(velocity);
+		float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159f + 90.f;
+		aircraft->setRotation(sf::degrees(angle));
+		bounced = true;
+	}
+
+	// Check top boundary
+	if (aircraft_bounds.position.y <= m_world_bounds.position.y)
+	{
+		position.y = m_world_bounds.position.y + (aircraft_bounds.size.y / 2.f);
+		float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+		velocity.y = -velocity.y;
+		if (speed > 0.f)
+		{
+			velocity = (velocity / speed) * bounce_force;
+		}
+		else
+		{
+			velocity = sf::Vector2f(0.f, bounce_force);
+		}
+		aircraft->SetVelocity(velocity);
+		float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159f + 90.f;
+		aircraft->setRotation(sf::degrees(angle));
+		bounced = true;
+	}
+	// Check bottom boundary
+	else if (aircraft_bounds.position.y + aircraft_bounds.size.y >= m_world_bounds.position.y + m_world_bounds.size.y)
+	{
+		position.y = m_world_bounds.position.y + m_world_bounds.size.y - (aircraft_bounds.size.y / 2.f);
+		float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+		velocity.y = -velocity.y;
+		if (speed > 0.f)
+		{
+			velocity = (velocity / speed) * bounce_force;
+		}
+		else
+		{
+			velocity = sf::Vector2f(0.f, -bounce_force);
+		}
+		aircraft->SetVelocity(velocity);
+		float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159f + 90.f;
+		aircraft->setRotation(sf::degrees(angle));
+		bounced = true;
+	}
+
+	if (bounced)
+	{
+		aircraft->setPosition(position);
+		aircraft->SetCollisionImmunity(kWallBounceGracePeriod);
 	}
 }
 
