@@ -39,8 +39,6 @@ GameplayCoordinator::GameplayCoordinator(Aircraft* player1, Aircraft* player2, S
 
 void GameplayCoordinator::Update(sf::Time dt)
 {
-	GuideMissiles();
-	TrackPlayers();
 
 	// Use collision handler to process all collisions
 	if (m_collision_handler)
@@ -126,31 +124,6 @@ void GameplayCoordinator::RespawnDeadPlayers(const sf::Vector2f& spawn_pos_p1, c
 Aircraft* GameplayCoordinator::GetTrackedOpponent() const
 {
 	return m_tracked_opponent;
-}
-
-void GameplayCoordinator::GuideMissiles()
-{
-	// TODO - Implement missile guidance targeting the other player
-	// PlaceHolder for future guided missile implementation
-}
-
-void GameplayCoordinator::TrackPlayers()
-{
-	// Reset tracking
-	m_tracked_opponent = nullptr;
-
-	// Track kEagle aircraft that isn't destroyed
-	Command eagleTracker;
-	eagleTracker.category = static_cast<int>(ReceiverCategories::kPlayerAircraft);
-	eagleTracker.action = DerivedAction<Aircraft>([this](Aircraft& aircraft, sf::Time)
-	{
-		// Only track kEagle aircraft that aren't destroyed
-		if (aircraft.GetAircraftType() == AircraftType::kEagle && !aircraft.IsDestroyed())
-		{
-			m_tracked_opponent = &aircraft;
-		}
-	});
-	m_command_queue.Push(eagleTracker);
 }
 
 void GameplayCoordinator::SpawnRandomPickups()

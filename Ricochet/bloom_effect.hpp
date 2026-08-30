@@ -20,9 +20,6 @@ public:
 	void SetIntensity(float intensity) { m_intensity = intensity; }
 	float GetIntensity() const { return m_intensity; }
 
-	// You can also access the intensity directly for shader uniform
-	float GetCurrentIntensity() const { return m_intensity; }
-
 private:
 	typedef std::array<sf::RenderTexture, 2> RenderTextureArray;
 

@@ -18,9 +18,9 @@ public:
 
 	// Player state tracking
 	void Update(Aircraft* player1, Aircraft* player2);
-	void RespawnDeadPlayers(const sf::Vector2f& spawn_pos_p1, const sf::Vector2f& spawn_pos_p2);
 
 private:
+	void UpdateKillDisplay(TextNode* display, int kill_count);
 	// Kill counts
 	int m_player1_kills;
 	int m_player2_kills;
@@ -33,6 +33,4 @@ private:
 	TextNode* m_player1_kill_display;
 	TextNode* m_player2_kill_display;
 
-	// Helper methods
-	void UpdateKillDisplay(TextNode* display, int kill_count);
 };

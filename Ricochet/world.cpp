@@ -43,9 +43,6 @@ World::World(sf::RenderTarget& output_target, FontHolder& font, SoundPlayer& sou
 
 void World::Update(sf::Time dt)
 {
-	GuideMissiles();
-	TrackPlayers();
-
 	//UpdateSounds();
 
 	//Process commands from the scenegraph
@@ -160,11 +157,6 @@ void World::IncrementPlayer2Kills()
 	}
 }
 
-Aircraft* World::GetTrackedOpponent() const
-{
-	return m_tracked_opponent;
-}
-
 void World::LoadTextures()
 {
 	m_textures.Load(TextureID::kEntities, "Media/Textures/Entities.png");
@@ -249,70 +241,6 @@ void World::KillGUI()
 	m_player2_kill_display->setPosition(sf::Vector2f(m_target.getSize().x - 90.f, 30.f));
 	m_player2_kill_display->setScale(sf::Vector2f(2.f, 2.f));
 	m_player2_kill_display->SetColor(sf::Color::Red);  // Player 2 - Red
-}
-
-void World::GuideMissiles()
-{
-	//TODO - Change this so it targets the other player
-	////Target the closest enemy in the world
-	//Command enemyCollector;
-	//enemyCollector.category = static_cast<int>(ReceiverCategories::kEnemyAircraft);
-	//enemyCollector.action = DerivedAction<Aircraft>([this](Aircraft& enemy, sf::Time)
-	//	{
-	//		if (!enemy.IsDestroyed())
-	//		{
-	//			m_active_enemies.emplace_back(&enemy);
-	//		}
-	//	});
-
-	//Command missileGuider;
-	//missileGuider.category = static_cast<int>(ReceiverCategories::kAlliedProjectile);
-	//missileGuider.action = DerivedAction<Projectile>([this](Projectile& missile, sf::Time)
-	//	{
-	//		if (!missile.IsGuided())
-	//		{
-	//			return;
-	//		}
-
-	//		float min_distance = std::numeric_limits<float>::max();
-	//		Aircraft* closest_enemy = nullptr;
-
-	//		for (Aircraft* enemy : m_active_enemies)
-	//		{
-	//			float enemy_distance = Distance(missile, *enemy);
-	//			if (enemy_distance < min_distance)
-	//			{
-	//				closest_enemy = enemy;
-	//				min_distance = enemy_distance;
-	//			}
-	//		}
-	//		if (closest_enemy)
-	//		{
-	//			missile.GuideTowards(closest_enemy->GetWorldPosition());
-	//		}
-	//	});
-	//m_command_queue.Push(enemyCollector);
-	//m_command_queue.Push(missileGuider);
-	//m_active_enemies.clear();
-}
-
-void World::TrackPlayers()
-{
-	// Reset tracking
-	m_tracked_opponent = nullptr;
-
-	// Track kEagle aircraft that isn't destroyed
-	Command eagleTracker;
-	eagleTracker.category = static_cast<int>(ReceiverCategories::kPlayerAircraft);
-	eagleTracker.action = DerivedAction<Aircraft>([this](Aircraft& aircraft, sf::Time)
-	{
-		// Only track kEagle aircraft that aren't destroyed
-		if (aircraft.GetAircraftType() == AircraftType::kEagle && !aircraft.IsDestroyed())
-		{
-			m_tracked_opponent = &aircraft;
-		}
-	});
-	m_command_queue.Push(eagleTracker);
 }
 
 void World::UpdateSounds()

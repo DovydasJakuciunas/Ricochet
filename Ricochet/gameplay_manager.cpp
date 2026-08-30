@@ -22,7 +22,7 @@ int GameplayManager::GetPlayer2Kills() const
 {
 	return m_player2_kills;
 }
-
+f
 void GameplayManager::IncrementPlayer1Kills()
 {
 	m_player1_kills++;
@@ -69,12 +69,4 @@ void GameplayManager::Update(Aircraft* player1, Aircraft* player2)
 	// Update alive status for next frame
 	m_player1_was_alive = player1_alive;
 	m_player2_was_alive = player2_alive;
-}
-
-void GameplayManager::RespawnDeadPlayers(const sf::Vector2f& spawn_pos_p1, const sf::Vector2f& spawn_pos_p2)
-{
-	// This method will be called after HandleCollisions in World::Update
-	// to respawn any dead players. The actual respawn logic remains in World::Update
-	// since it needs access to the players and scene graph.
-	// This is kept for future expansion or state tracking.
 }

@@ -240,7 +240,6 @@
     <ClCompile Include="projectile.cpp" />
     <ClCompile Include="scene_node.cpp" />
     <ClCompile Include="settings_state.cpp" />
-    <ClCompile Include="shader_types.cpp" />
     <ClCompile Include="sound_node.cpp" />
     <ClCompile Include="sound_player.cpp" />
     <ClCompile Include="sprite_node.cpp" />

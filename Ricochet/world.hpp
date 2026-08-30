@@ -31,17 +31,12 @@ public:
 	void IncrementPlayer1Kills();
 	void IncrementPlayer2Kills();
 
-	// Track opponent
-	Aircraft* GetTrackedOpponent() const;
-
 private:
 	void LoadTextures();
 	void BuildScene();
 
 	void KillGUI();
 
-	void GuideMissiles();
-	void TrackPlayers();
 	void UpdateSounds();
 	void SpawnRandomPickups();
 
