@@ -168,6 +168,7 @@
     <ClInclude Include="menu_options.hpp" />
     <ClInclude Include="menu_state.hpp" />
     <ClInclude Include="mission_status.hpp" />
+    <ClInclude Include="movement_controller.hpp" />
     <ClInclude Include="music_player.hpp" />
     <ClInclude Include="music_themes.hpp" />
     <ClInclude Include="particle.hpp" />
@@ -199,6 +200,7 @@
     <ClInclude Include="text_node.hpp" />
     <ClInclude Include="title_state.hpp" />
     <ClInclude Include="utility.hpp" />
+    <ClInclude Include="weapon_system.hpp" />
     <ClInclude Include="world.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -220,6 +222,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="menu_state.cpp" />
     <ClCompile Include="MissionStatus.cpp" />
+    <ClCompile Include="movement_controller.cpp" />
     <ClCompile Include="music_player.cpp" />
     <ClCompile Include="particle.cpp" />
     <ClCompile Include="particle_node.cpp" />
@@ -241,6 +244,7 @@
     <ClCompile Include="text_node.cpp" />
     <ClCompile Include="title_state.cpp" />
     <ClCompile Include="utility.cpp" />
+    <ClCompile Include="weapon_system.cpp" />
     <ClCompile Include="world.cpp" />
   </ItemGroup>
   <ItemGroup>

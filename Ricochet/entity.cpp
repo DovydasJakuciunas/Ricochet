@@ -41,6 +41,12 @@ void Entity::Repair(int points)
 {
 	assert(points > 0);
 	m_hitpoints += points;
+
+	// Cap health at maximum for the player (100 HP)
+	if (m_hitpoints > kMaxPlayerHealth)
+	{
+		m_hitpoints = kMaxPlayerHealth;
+	}
 }
 
 void Entity::Damage(int points)

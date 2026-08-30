@@ -1,15 +1,20 @@
 #include "aircraft.hpp"
+#include "weapon_system.hpp"
+#include "movement_controller.hpp"
 #include "texture_id.hpp"
 #include "data_tables.hpp"
 #include "constants.hpp"
-#include "projectile.hpp"
-#include "projectile_type.hpp"
-#include "sound_node.hpp"
+#include "utility.hpp"
 
 
 namespace
 {
 	const std::vector<AircraftData> Table = InitializeAircraftData();
+
+	// Explosion animation constants
+	const int kExplosionFrameSize = 256;
+	const int kExplosionFrameCount = 16;
+	const float kExplosionDuration = 1.0f;
 }
 
 TextureID ToTextureID(AircraftType type)
@@ -34,37 +39,18 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	, m_missile_display(nullptr)
 	, m_distance_travelled(0.f)
 	, m_directions_index(0)
-	, m_fire_rate(1)
-	, m_spread_level(1)
-	, m_is_firing(false)
-	, m_is_launching_missile(false)
-	, m_fire_countdown(sf::Time::Zero)
-	, m_missile_ammo(2)
 	, m_is_marked_for_removal(false)
 	, m_show_explosion(true)
 	, m_explosion(textures.Get(TextureID::kExplosion))
 	, m_explosion_began(false)
-	, m_forward_acceleration_time(sf::Time::Zero)
-	, m_release_time(sf::Time::Zero)
-	, m_velocity_at_release(0.f, 0.f)
+	, m_weapon_system(std::make_unique<WeaponSystem>(this, textures))
+	, m_movement_controller(std::make_unique<MovementController>(this))
 {
-	m_explosion.SetFrameSize(sf::Vector2i(256, 256));
-	m_explosion.SetNumFrames(16);
-	m_explosion.SetDuration(sf::seconds(1));
+	m_explosion.SetFrameSize(sf::Vector2i(kExplosionFrameSize, kExplosionFrameSize));
+	m_explosion.SetNumFrames(kExplosionFrameCount);
+	m_explosion.SetDuration(sf::seconds(kExplosionDuration));
 	Utility::CentreOrigin(m_sprite);
 	Utility::CentreOrigin(m_explosion);
-
-	m_fire_command.category = static_cast<int>(ReceiverCategories::kScene);
-	m_fire_command.action = [this, &textures](SceneNode& node, sf::Time dt)
-		{
-			CreateBullet(node, textures);
-		};
-
-	m_missile_command.category = static_cast<int>(ReceiverCategories::kScene);
-	m_missile_command.action = [this, &textures](SceneNode& node, sf::Time dt)
-		{
-			CreateProjectile(node, ProjectileType::kMissile, 0.f, 0.5f, textures);
-		};
 
 	std::string* health = new std::string("");
 	std::unique_ptr<TextNode> health_display(new TextNode(fonts, *health));
@@ -81,6 +67,10 @@ Aircraft::Aircraft(AircraftType type, const TextureHolder& textures, const FontH
 	UpdateTexts();
 }
 
+Aircraft::~Aircraft()
+{
+}
+
 unsigned int Aircraft::GetCategory() const
 {
 	if (IsAllied())
@@ -92,23 +82,17 @@ unsigned int Aircraft::GetCategory() const
 
 void Aircraft::IncreaseFireRate()
 {
-	if (m_fire_rate < kMaxFireRate)
-	{
-		++m_fire_rate;
-	}
+	m_weapon_system->IncreaseFireRate();
 }
 
 void Aircraft::IncreaseFireSpread()
 {
-	if (m_spread_level < kMaxSpread)
-	{
-		++m_spread_level;
-	}
+	m_weapon_system->IncreaseFireSpread();
 }
 
 void Aircraft::CollectMissile(unsigned int count)
 {
-	m_missile_ammo += count;
+	m_weapon_system->CollectMissile(count);
 }
 
 void Aircraft::UpdateTexts()
@@ -120,13 +104,13 @@ void Aircraft::UpdateTexts()
 	if (m_missile_display)
 	{
 		m_missile_display->setPosition(sf::Vector2f(0.f, 70.f));
-		if (m_missile_ammo == 0)
+		if (m_weapon_system->GetMissileAmmo() == 0)
 		{
 			m_missile_display->SetString("");
 		}
 		else
 		{
-			m_missile_display->SetString("M: " + std::to_string(m_missile_ammo));
+			m_missile_display->SetString("M: " + std::to_string(m_weapon_system->GetMissileAmmo()));
 		}
 	}
 }
@@ -138,106 +122,28 @@ float Aircraft::GetMaxSpeed() const
 
 void Aircraft::Fire()
 {
-	if (Table[static_cast<int>(m_type)].m_fire_interval != sf::Time::Zero)
-	{
-		m_is_firing = true;
-	}
+	m_weapon_system->Fire();
 }
 
 void Aircraft::LaunchMissile()
 {
-	if (m_missile_ammo > 0)
-	{
-		m_is_launching_missile = true;
-		--m_missile_ammo;
-	}
+	m_weapon_system->LaunchMissile();
 }
 
 void Aircraft::CreateBullet(SceneNode& node, const TextureHolder& textures)
 {
-	ProjectileType type = IsAllied() ? ProjectileType::kAlliedBullet : ProjectileType::kEnemyBullet;
-	switch (m_spread_level)
-	{
-	case 1:
-		if (m_is_firing)
-		{
-			CreateProjectile(node, type, 0.0f, 0.5f, textures);
-			m_is_firing = false;
-		}
-		break;
-	case 2:
-		if (m_is_firing)
-		{
-			CreateProjectile(node, type, -0.5f, 0.5f, textures);
-			CreateProjectile(node, type, 0.5f, 0.5f, textures);
-			m_is_firing = false;
-			break;
-		}
-	case 3:
-		if (m_is_firing)
-		{
-			CreateProjectile(node, type, 0.0f, 0.5f, textures);
-			CreateProjectile(node, type, -0.5f, 0.5f, textures);
-			CreateProjectile(node, type, 0.5f, 0.5f, textures);
-			m_is_firing = false;
-			break;
-		}
-	}
+	m_weapon_system->CreateBullet(node, textures);
 }
 
 void Aircraft::CreateProjectile(SceneNode& node, ProjectileType type, float x_offset, float y_offset, const TextureHolder& textures)
 {
-	if (m_is_launching_missile || m_is_firing)
-	{
-		std::unique_ptr<Projectile> projectile(new Projectile(type, textures));
-		sf::Vector2f spawnPosition = GetBulletSpawnPosition(x_offset);
-
-		// Calculate velocity in the direction the jet is facing
-		float rotationDegrees = getRotation().asDegrees();
-		double rotationRadians = Utility::toRadians(rotationDegrees + -90.f);
-		float maxSpeed = projectile->GetMaxSpeed();
-
-		float dirX = -std::cos(rotationRadians);
-		float dirY = -std::sin(rotationRadians);
-
-		float sign = IsAllied() ? -1.f : 1.f;
-		sf::Vector2f velocity(dirX * maxSpeed * sign, dirY * maxSpeed * sign);
-
-		projectile->setPosition(spawnPosition);
-		projectile->SetVelocity(velocity);
-		node.AttachChild(std::move(projectile));
-		m_is_launching_missile = false;
-	}
+	m_weapon_system->CreateProjectile(node, type, x_offset, y_offset, textures);
 }
 
 sf::Vector2f Aircraft::GetBulletSpawnPosition(float x_offset) const
 {
-	// Get the jet's bounding box and center
-	sf::FloatRect bounds = m_sprite.getGlobalBounds();
-	sf::Vector2f jetCenter = GetWorldPosition();
-
-	// Calculate the front (nose) of the jet based on rotation
-	// The jet's front is perpendicular to its body, pointing in the direction it's facing
-	float rotationDegrees = getRotation().asDegrees();
-	double rotationRadians = Utility::toRadians(rotationDegrees + 90.f);
-
-	// Distance from center to front of jet (half height)
-	float frontDistance = bounds.size.y * 0.5f;
-
-	// Calculate front position based on rotation
-	float frontX = -std::cos(rotationRadians) * frontDistance;
-	float frontY = -std::sin(rotationRadians) * frontDistance;
-
-	// Apply horizontal spread offset at the front
-	float spreadOffsetX = x_offset * bounds.size.x;
-	double spreadRotationRadians = Utility::toRadians(rotationDegrees);
-	float perpX = -std::cos(spreadRotationRadians) * spreadOffsetX;
-	float perpY = -std::sin(spreadRotationRadians) * spreadOffsetX;
-
-	sf::Vector2f spawnPos = jetCenter + sf::Vector2f(frontX + perpX, frontY + perpY);
-	return spawnPos;
+	return m_weapon_system->GetBulletSpawnPosition(x_offset);
 }
-
 
 sf::FloatRect Aircraft::GetBoundingRect() const
 {
@@ -251,16 +157,7 @@ bool Aircraft::IsMarkedForRemoval() const
 
 void Aircraft::PlayLocalSound(CommandQueue& commands, SoundEffect effect)
 {
-	sf::Vector2f world_position = GetWorldPosition();
-
-	Command command;
-	command.category = static_cast<int>(ReceiverCategories::kSoundEffect);
-	command.action = DerivedAction<SoundNode>(
-		[effect, world_position](SoundNode& node, sf::Time)
-		{
-			node.PlaySound(effect, world_position);
-		});
-	commands.Push(command);
+	m_weapon_system->PlayLocalSound(commands, effect);
 }
 
 void Aircraft::DrawCurrent(sf::RenderTarget& target, sf::RenderStates states) const
@@ -296,36 +193,8 @@ void Aircraft::UpdateCurrent(sf::Time dt, CommandQueue& commands)
 
 	UpdateRollAnimation();
 
-	//Check if bullets or missiles were fired
-	CheckProjectileLaunch(dt, commands);
-}
-
-void Aircraft::CheckProjectileLaunch(sf::Time dt, CommandQueue& commands)
-{
-	if (!IsAllied())
-	{
-		Fire();
-	}
-
-	if (m_is_firing && m_fire_countdown <= sf::Time::Zero)
-	{
-		PlayLocalSound(commands, IsAllied() ? SoundEffect::kEnemyGunfire : SoundEffect::kAlliedGunfire);
-		commands.Push(m_fire_command);
-		m_fire_countdown += Table[static_cast<int>(m_type)].m_fire_interval / (m_fire_rate + 1.f);
-	}
-	else if (m_fire_countdown > sf::Time::Zero)
-	{
-		m_fire_countdown -= dt;
-		m_is_firing = false;
-	}
-
-	//Missile launch
-	if (m_is_launching_missile)
-	{
-		PlayLocalSound(commands, SoundEffect::kLaunchMissile);
-		commands.Push(m_missile_command);
-		//m_is_launching_missile = false;
-	}
+	// Update weapon system
+	m_weapon_system->Update(dt, commands);
 }
 
 bool Aircraft::IsAllied() const
@@ -355,108 +224,65 @@ void Aircraft::UpdateRollAnimation()
 
 void Aircraft::IncrementForwardTime(sf::Time dt)
 {
-	m_forward_acceleration_time += dt;
+	m_movement_controller->IncrementForwardTime(dt);
 }
 
 void Aircraft::ResetForwardTime()
 {
-	m_forward_acceleration_time = sf::Time::Zero;
+	m_movement_controller->ResetForwardTime();
 }
 
 sf::Time Aircraft::GetForwardAccelerationTime() const
 {
-	return m_forward_acceleration_time;
+	return m_movement_controller->GetForwardAccelerationTime();
 }
 
 void Aircraft::IncrementReleaseTime(sf::Time dt)
 {
-	m_release_time += dt;
+	m_movement_controller->IncrementReleaseTime(dt);
 }
 
 void Aircraft::ResetReleaseTime()
 {
-	m_release_time = sf::Time::Zero;
+	m_movement_controller->ResetReleaseTime();
 }
 
 sf::Time Aircraft::GetReleaseTime() const
 {
-	return m_release_time;
+	return m_movement_controller->GetReleaseTime();
 }
 
 void Aircraft::StoreVelocityAtRelease()
 {
-	m_velocity_at_release = GetVelocity();
+	m_movement_controller->StoreVelocityAtRelease();
 }
 
 sf::Vector2f Aircraft::GetVelocityAtRelease() const
 {
-	return m_velocity_at_release;
+	return m_movement_controller->GetVelocityAtRelease();
 }
 
 void Aircraft::InvertVelocityX()
 {
-	sf::Vector2f velocity = GetVelocity();
-	SetVelocity(-velocity.x, velocity.y);
+	m_movement_controller->InvertVelocityX();
 }
 
 void Aircraft::InvertVelocityY()
 {
-	sf::Vector2f velocity = GetVelocity();
-	SetVelocity(velocity.x, -velocity.y);
+	m_movement_controller->InvertVelocityY();
 }
 
 void Aircraft::InvertRotation()
 {
-	// Get current rotation and invert it by adding 180 degrees
-	float currentRotation = getRotation().asDegrees();
-	float invertedRotation = currentRotation + 180.f;
-
-	// Normalize to 0-360 range
-	if (invertedRotation >= 360.f)
-	{
-		invertedRotation -= 360.f;
-	}
-
-	setRotation(sf::degrees(invertedRotation));
+	m_movement_controller->InvertRotation();
 }
 
 void Aircraft::AlignVelocityToRotation()
 {
-	// Get current velocity magnitude (speed)
-	sf::Vector2f currentVelocity = GetVelocity();
-	float speed = std::sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y);
-
-	if (speed < 0.1f)
-	{
-		return; // No significant velocity
-	}
-
-	// Get rotation angle and convert to radians
-	float rotationDegrees = getRotation().asDegrees();
-	double radians = Utility::toRadians(rotationDegrees + 90.f);
-
-	// Calculate direction vectors based on rotation
-	// Aircraft forward is at 90 degrees in SFML coordinate system
-	float dirX = -std::cos(radians);
-	float dirY = -std::sin(radians);
-
-	// Apply new velocity in the direction the aircraft is facing, maintaining speed
-	SetVelocity(dirX * speed, dirY * speed);
+	m_movement_controller->AlignVelocityToRotation();
 }
 
 void Aircraft::AlignRotationToDirection()
 {
-	sf::Vector2f velocity = GetVelocity();
-	if (velocity.x == 0.f && velocity.y == 0.f)
-	{
-		return; // No velocity, can't align
-	}
-
-	// Calculate angle from velocity vector
-	// atan2(y, x) gives angle in radians
-	float angle = std::atan2(velocity.y, velocity.x) * 180.f / 3.14159265f;
-	// Aircraft forward is at 90 degrees in SFML, so adjust
-	angle = angle - 90.f;
-
-	setRotation(sf::degrees(angle));
+	m_movement_controller->AlignRotationToDirection();
 }
